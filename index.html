@@ -222,6 +222,11 @@ details.notes li .es{display:block;color:var(--muted);font-size:12.5px}
 .nfstat.g{background:#16a34a;border-color:#111827}.nfstat.y,.nfstat.r,.nfstat.c,.nfstat.n{background:#dc2626;border-color:#111827}
 [data-n="3"]::before{top:-6px;left:auto;right:-28px}
 [data-n="2"]::before{top:-12px;left:2px}
+
+/* UPDATE 7 TEST v8: #3 + #5 merged into one status bar (green = updated, red = not updated) */
+.hdr.homehdr .row{padding:12px 12px 12px 12px}
+.nfstat{width:100%;height:auto;min-height:44px;padding:10px 14px;margin:0 0 12px 0;border:2px solid #111827;border-radius:10px;color:#fff;font-size:16px;font-weight:800;letter-spacing:.3px;text-align:left;line-height:1.25;display:block;background:#b91c1c}
+.nfstat.g{background:#15803d}.nfstat.y,.nfstat.r,.nfstat.c,.nfstat.n{background:#b91c1c}
 </style>
 </head>
 <body>
@@ -349,7 +354,7 @@ function parseRoute(){ const h=(location.hash||'#home').slice(1); const parts=h.
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v7'};
+const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v8'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -530,12 +535,12 @@ function renderHome(app){ setBB(''); const T=DATA.title;
   const pend=(en,es,row)=>`<button class="fbtn off" style="grid-column:2;grid-row:${row}" disabled><b>${en}</b><span>${es}</span><small>Not loaded yet<br>Aún no cargado</small></button>`;
   app.innerHTML = header(null, 'FLOOR TRUSS', esc(T.job)+' · '+esc(T.company), '#d99a00') + `
   <div class="wrap">
-    <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status"></button>
+    <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE ${NF_UPDATE.n} · ${NF_UPDATE.date}</button>
     <div class="fgrid">${fl(4)}${fl(5)}${fl(6)}${fl(7)}${pend('Roof trusses','Trusses de techo',2)}${pend('Floor joist profiles','Perfiles de floor joist',3)}${pend('Roof truss profiles','Perfiles de trusses de techo',4)}</div>
     ${installBanner()}${installCard()}${howCard()}
     <div class="foot">National Framing · AMLI West. Tap a floor to see its files. / Toca un piso para ver sus archivos.</div>
   </div>`;
-  const hd=app.querySelector('.hdr'); if(hd) hd.classList.add('homehdr');
+  const hd=app.querySelector('.hdr'); if(hd){ hd.classList.add('homehdr'); const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); }
   nfCheck(); nfNumber();
 }
 /* Home element numbers (Jorge: "numerar los botones y elementos") - dark badge, top-left of each element */
