@@ -354,7 +354,7 @@ function parseRoute(){ const h=(location.hash||'#home').slice(1); const parts=h.
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v8'};
+const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v9'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -532,11 +532,12 @@ function renderHome(app){ setBB(''); const T=DATA.title;
   const ORD={4:'4th',5:'5th',6:'6th',7:'7th'};
   const fl=n=>{ const L=NF_LEVELS.find(x=>x.n===n); const av=nfLvlTypes(L);
     return `<button class="fbtn" style="grid-column:1;grid-row:${n-3}" onclick="go('#lvl--${n}')"><b>${ORD[n]} Floor</b></button>`; };
+  const roofY=()=>`<button class="fbtn" style="grid-column:1;grid-row:5" disabled><b>Roof trusses</b><small>Not loaded yet<br>Aún no cargado</small></button>`;
   const pend=(en,es,row)=>`<button class="fbtn off" style="grid-column:2;grid-row:${row}" disabled><b>${en}</b><span>${es}</span><small>Not loaded yet<br>Aún no cargado</small></button>`;
   app.innerHTML = header(null, 'FLOOR TRUSS', esc(T.job)+' · '+esc(T.company), '#d99a00') + `
   <div class="wrap">
     <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE ${NF_UPDATE.n} · ${NF_UPDATE.date}</button>
-    <div class="fgrid">${fl(4)}${fl(5)}${fl(6)}${fl(7)}${pend('Roof trusses','Trusses de techo',2)}${pend('Floor joist profiles','Perfiles de floor joist',3)}${pend('Roof truss profiles','Perfiles de trusses de techo',4)}</div>
+    <div class="fgrid">${fl(4)}${fl(5)}${fl(6)}${fl(7)}${roofY()}${pend('Floor joist profiles','Perfiles de floor joist',2)}${pend('Roof truss profiles','Perfiles de trusses de techo',3)}</div>
     ${installBanner()}${installCard()}${howCard()}
     <div class="foot">National Framing · AMLI West. Tap a floor to see its files. / Toca un piso para ver sus archivos.</div>
   </div>`;
