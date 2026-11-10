@@ -173,14 +173,25 @@ details.notes li .es{display:block;color:var(--muted);font-size:12.5px}
 .viewer .tapwrap .tap.tr:active{background:rgba(255,196,0,.6)}
 .viewer .tapwrap .tap.tr.hl{background:rgba(225,29,29,.28);border-color:#e11d1d}
 .sbtn[disabled]{cursor:default}
+
+/* UPDATE 7 TEST v3: level buttons on Home */
+.lvls{display:flex;flex-direction:column;gap:10px}
+.lvlbtn{display:flex;align-items:center;gap:14px;width:100%;min-height:78px;border-radius:14px;border:2px solid var(--nf2);background:var(--nf);color:var(--ink);padding:10px 14px;text-align:left}
+.lvlbtn .ln{font-size:44px;font-weight:900;line-height:1;min-width:70px;text-align:center}
+.lvlbtn .ln small{display:block;font-size:10px;font-weight:800;letter-spacing:.04em;margin-bottom:2px}
+.lvlbtn .lt{flex:1;font-size:15px;font-weight:700;line-height:1.3}
+.lvlbtn .lc{font-size:32px;font-weight:900}
+.lvlbtn.off{background:#fff;color:#4b5563;border-color:var(--line)}
+.sbtn[disabled]{opacity:.9!important}
+.sbtn[disabled] .n{color:#374151}
 </style>
 </head>
 <body>
 <div class="trtest">TEST COPY — not the live app · COPIA DE PRUEBA — no es la app real</div>
 <div id="app"></div>
 <div class="bottombar" id="bottombar">
-  <button id="bb-home" onclick="go('#home')">Full plan<span>Plano completo</span></button>
-  <button id="bb-secs" onclick="go('#home','secs')">Sections<span>Secciones</span></button>
+  <button id="bb-home" onclick="go('#conn')">Full plan<span>Plano completo</span></button>
+  <button id="bb-secs" onclick="go('#conn','secs')">Sections<span>Secciones</span></button>
   <button id="bb-all" onclick="go('#all')">All connections<span>Todas las conexiones</span></button>
 </div>
 <script>
@@ -300,15 +311,15 @@ function parseRoute(){ const h=(location.hash||'#home').slice(1); const parts=h.
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 9, 2026 · v2'};
+const NF_UPDATE = {n:7, date:'TEST · Nov 9, 2026 · v3'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
-function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
-function modeSwitch(){ const m=nfMode();
+function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
+function modeSwitch(){ const m=nfMode(); if(m==='lv') return '';
   return `<div class="modesw" role="group" aria-label="View / Vista"><button class="${m==='conn'?'on':''}" onclick="nfSwitch('conn')" aria-label="Connections / Conexiones">Connections</button><button class="${m==='sw'?'on':''}" onclick="nfSwitch('sw')" aria-label="Shearblocks / Bloqueo de corte">Shearblocks</button><button class="${m==='tr'?'on':''}" onclick="nfSwitch('tr')" aria-label="Trusses">Trusses</button></div>`; }
 function nfSwitch(m){ const cur=nfMode();
-  if(m===cur){ go(m==='sw'?('#swall--'+(((location.hash||'').split('--')[1]&&SWDATA.sw_levels.some(l=>l.id===location.hash.split('--')[1]))?location.hash.split('--')[1]:DEFAULT_SW_LEVEL)):(m==='tr'?'#trall':'#home')); return; }
-  go(NF_LAST[m] || (m==='sw'?('#swall--'+DEFAULT_SW_LEVEL):(m==='tr'?'#trall':'#home'))); }
+  if(m===cur){ go(m==='sw'?('#swall--'+(((location.hash||'').split('--')[1]&&SWDATA.sw_levels.some(l=>l.id===location.hash.split('--')[1]))?location.hash.split('--')[1]:DEFAULT_SW_LEVEL)):(m==='tr'?'#trall':'#conn')); return; }
+  go(NF_LAST[m] || (m==='sw'?('#swall--'+DEFAULT_SW_LEVEL):(m==='tr'?'#trall':'#conn'))); }
 function header(back, t1, t2, color){
   return `<div class="hdr"><div class="updbar">${modeSwitch()}<div class="upd" aria-label="Update ${NF_UPDATE.n}, ${NF_UPDATE.date}">UPDATE ${NF_UPDATE.n}<i>· ${NF_UPDATE.date}</i></div></div><div class="row"><img class="logo" src="header-mark.png" alt="National Framing"${back?'':' style="margin-right:2px"'}>${back?`<button class="back" onclick="${esc(back.fn)}">◀ ${esc(back.label)}</button>`:''}<div class="ttl"><div class="t1">${t1}</div><div class="t2">${t2}</div></div></div><div class="stripe" style="background:${color||'#1e73be'}"></div></div>`;
 }
@@ -317,6 +328,7 @@ function setBB(which){ for(const k of ['home','secs','all']){ const b=document.g
 /* ---------- views ---------- */
 function render(){ document.body.classList.remove('nf-lock'); { const hb=document.getElementById('nfhint'); if(hb) hb.style.display=(parseRoute().view==='install')?'none':''; } const r=parseRoute(); const app=document.getElementById('app'); NF_LAST[nfMode()]=location.hash||'#home';
   { const bb=document.getElementById('bottombar'); if(bb && nfMode()!=='tr' && bb.dataset.m==='tr'){ bb.innerHTML=BB_ORIG; bb.dataset.m=''; } }
+  { const bb=document.getElementById('bottombar'); if(bb) bb.style.display=(nfMode()==='lv')?'none':''; }
   if(/^tr/.test(r.view)){ renderTR(app, r); return; }
   if(r.view==='sec' && SEC[r.arg]) renderSection(app, SEC[r.arg], r.qs);
   else if(r.view==='det' && DET[r.arg]) renderDetail(app, DET[r.arg], r.qs);
@@ -326,6 +338,8 @@ function render(){ document.body.classList.remove('nf-lock'); { const hb=documen
   else if(r.view==='swsec' && SEC_SW[r.arg]) renderSWSection(app, SEC_SW[r.arg], r.qs.level, r.qs);
   else if(r.view==='swdet' && DET_SW[r.arg]) renderSWDetail(app, DET_SW[r.arg], r.qs.level, r.qs);
   else if(r.view==='swall') renderSWAll(app, r.qs.level, r.qs);
+  else if(r.view==='conn') renderConnHome(app);
+  else if(r.view==='lvl') renderLevel(app, r.arg);
   else renderHome(app);
 }
 
@@ -439,12 +453,11 @@ function renderInstall(app){ setBB('');
     <div style="height:10px"></div><button class="btn" onclick="go('#home')">◀ Home · Inicio</button>
   </div>`;
 }
-function renderHome(app){ setBB('home'); const T=DATA.title; const fp=DATA.fullplan;
+function renderConnHome(app){ setBB('home'); const T=DATA.title; const fp=DATA.fullplan;
   let labels=DATA.sections.map(s=>`<button class="lbl" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#sec--${s.id}')">${esc(s.label)}</button>`).join('');
-  app.innerHTML = header(null, '4TH LEVEL – FLOOR TRUSS CONNECTIONS', T.job+' · '+T.company, '#d99a00') + `
+  app.innerHTML = header({label:'Level 4',fn:"go('#lvl--4')"}, '4TH LEVEL – FLOOR TRUSS CONNECTIONS', T.job+' · '+T.company, '#d99a00') + `
   <div class="wrap">
     <div class="card title-card"><img src="header-logo.png" alt="National Framing Inc" style="height:46px;width:auto;border-radius:8px;margin-bottom:10px;display:block"><div class="big">4th Level – Floor Truss Connections</div><div class="sub">${esc(T.job)} · West Building · Buildings #3, #4 and #5</div><div class="meta">${esc(T.company)} · Rev 1 · ${esc(T.date)} · Created by ${esc(T.author)} · Phone version v1 (2026-11-02)</div></div>
-    ${installBanner()}${installCard()}${howCard()}
     <div class="card"><h2>Full plan – 4th level <small>Plano completo – nivel 4. Tap a section / Toca una sección.</small></h2>
       <div class="plan" id="plan" onclick="planTap(event)"><img id="planimg" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div>
       <div class="legend">${DATA.sections.map(s=>`<span class="pill" onclick="go('#sec--${s.id}')"><span class="dot" style="background:${rgb(s.color)}"></span>${esc(s.label)}</span>`).join('')}</div>
@@ -462,6 +475,50 @@ function renderHome(app){ setBB('home'); const T=DATA.title; const fp=DATA.fullp
     </div>
     <div class="card"><details class="notes"><div class="card"><details class="notes"><summary>Notes from the plan · Notas del plano</summary><ol>${DATA.notes.map(n=>`<li>${esc(n.en)}<span class="es">${esc(n.es)}</span></li>`).join('')}</ol></details></div>
     <div class="foot">Built from "4th Level - Floor Truss Connections - AMLI West.pdf" (111 pages, 30/10/26). National Framing · 2026-11-02.</div>
+  </div>`;
+}
+/* ---- UPDATE 7 TEST v3: Home = level buttons (3-7) -> file types of that level ---- */
+const NF_LEVELS=[
+  {n:3, tr:null,  conn:false, sw:null},
+  {n:4, tr:'4',    conn:true,  sw:'4th'},
+  {n:5, tr:'567',  conn:false, sw:'5th'},
+  {n:6, tr:'567',  conn:false, sw:'6th'},
+  {n:7, tr:'567',  conn:false, sw:null}];
+function nfLvlTypes(L){ const a=[]; if(L.tr) a.push('Truss layout'); if(L.conn) a.push('Connections'); if(L.sw) a.push('Shear blocks'); return a; }
+function renderHome(app){ setBB(''); const T=DATA.title;
+  const btns=NF_LEVELS.map(L=>{ const av=nfLvlTypes(L);
+    return `<button class="lvlbtn${av.length?'':' off'}" onclick="go('#lvl--${L.n}')"><span class="ln"><small>LEVEL · NIVEL</small>${L.n}</span><span class="lt">${av.length?av.join(' · '):'Not loaded yet<br>Aún no cargado'}</span><span class="lc">›</span></button>`; }).join('');
+  app.innerHTML = header(null, 'AMLI WEST – FLOOR TRUSSES', esc(T.job)+' · '+esc(T.company), '#d99a00') + `
+  <div class="wrap">
+    <div class="card"><h2>Levels <small>Niveles — tap a level / toca un nivel</small></h2><div class="lvls">${btns}</div></div>
+    <div class="card"><button class="btn sec" onclick="go('#trsearch')">🔎 Search a truss mark (WF29) · Buscar una marca</button></div>
+    ${installBanner()}${installCard()}${howCard()}
+    <div class="foot">National Framing · AMLI West. Tap a level to see its files. / Toca un nivel para ver sus archivos.</div>
+  </div>`;
+}
+function renderLevel(app,n){ n=+n; const L=NF_LEVELS.find(x=>x.n===n); if(!L){ go('#home'); return; } setBB('');
+  let rows='';
+  if(n===3){
+    rows+=`<div class="hint" style="margin:0 0 10px 0">Floor trusses start at Level 4. The Level 3 files are not loaded in the app yet. / Los floor trusses empiezan en el nivel 4. Los archivos del nivel 3 aún no están cargados en la app.</div>`;
+    rows+=trMenuRow('⏳','Sole plate connections','Conexiones de sole plate','Floor 3 · concrete connections · name to be confirmed / Piso 3 · conexiones de concreto · nombre por confirmar','',true);
+  } else {
+    rows+= L.tr
+      ? trMenuRow('📐','Truss layout','Layout de trusses', L.tr==='4'
+          ? 'Allied Truss · 8 sections, each with its sealed design pages / 8 secciones, cada una con sus páginas de diseño'
+          : 'Allied Truss · Levels 5, 6 and 7 are issued together; 4D and Bldg 5 pending / niveles 5, 6 y 7 juntos; 4D y Bldg 5 pendientes', `go('#trall--${L.tr}')`)
+      : trMenuRow('📐','Truss layout','Layout de trusses','Pending / Pendiente','',true);
+    rows+= L.conn
+      ? trMenuRow('🔩','Truss connections','Conexiones de trusses','Plan and sections · connection details and specs / Plano y secciones · detalles y especificaciones',`go('#conn')`)
+      : trMenuRow('🔩','Truss connections','Conexiones de trusses','Pending — only Level 4 is in the app today / Pendiente: hoy solo está el nivel 4','',true);
+    rows+= L.sw
+      ? trMenuRow('🧱','Shear blocks locations','Ubicación de shear blocks','Shear blocking marked for plumbing · '+n+'th level / bloqueo de corte marcado por plomería',`go('#swall--${L.sw}')`)
+      : trMenuRow('🧱','Shear blocks locations','Ubicación de shear blocks','Pending — no sheet for this level yet / Pendiente: aún no hay hoja de este nivel','',true);
+    rows+= trMenuRow('🛠','Repairs & RFI changes','Reparaciones y cambios por RFI','None posted yet / Ninguno publicado','',true);
+  }
+  app.innerHTML = header({label:'Home',fn:"go('#home')"}, 'LEVEL '+n, 'AMLI West · Nivel '+n, '#d99a00') + `
+  <div class="wrap">
+    <div class="card"><h2>Files <small>Archivos — tap one / toca uno</small></h2>${rows}</div>
+    <div class="foot">Level ${n} · Nivel ${n}</div>
   </div>`;
 }
 let idxCanvas=null;
@@ -497,7 +554,7 @@ function connCard(d, secId, countHere){
 
 function renderSection(app, s, qs){ setBB('secs');
   const items=s.conns.map(c=>Object.assign({}, DET[c.id], {plan_variants_here:c.variants})).sort((a,b)=>cmpId(a.id,b.id));
-  app.innerHTML = header({label:'Plan',fn:"go('#home')"}, `Section ${esc(s.label)}`, `${esc(s.bldg)} · PDF page ${s.page}`, rgb(s.color)) + `
+  app.innerHTML = header({label:'Plan',fn:"go('#conn')"}, `Section ${esc(s.label)}`, `${esc(s.bldg)} · PDF page ${s.page}`, rgb(s.color)) + `
   <div class="wrap">
     <div class="card"><h2>Section sheet <small>Hoja de la sección – pinch to zoom, drag to move, double-tap to zoom, tap a CONNECTION label to open its detail / pellizca para acercar, arrastra para mover, doble toque para acercar, toca una etiqueta CONNECTION para abrir su detalle</small></h2>
       <div class="viewer" id="v-sec"></div></div>
@@ -539,7 +596,7 @@ function detTab(k){ document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.cla
 
 function renderAll(app, qs){ setBB('all');
   const fams=DATA.families;
-  app.innerHTML = header({label:'Plan',fn:"go('#home')"}, 'All connections', `${DATA.details.length} detail sheets · Todas las conexiones`, '#d99a00') + `
+  app.innerHTML = header({label:'Plan',fn:"go('#conn')"}, 'All connections', `${DATA.details.length} detail sheets · Todas las conexiones`, '#d99a00') + `
   <div class="wrap"><div class="card">
     <input class="srch" id="srch" placeholder="Filter by number, e.g. 7B or 13 / Filtrar por número" oninput="filterList(this.value)">
     <div id="list">${DET_ORDER.map(id=>connCard(DET[id], null, null)).join('')}</div>
@@ -610,7 +667,7 @@ function renderSWAll(app, level, qs){ level = SWDATA.sw_levels.some(l=>l.id===le
   const LVL=SWDATA.sw_levels.find(l=>l.id===level);
   let labels=SWDATA.sw_sections.map(s=>`<button class="lbl" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#swsec--${level}--${s.id}')">${esc(s.label)}</button>`).join('');
   let lvltabs=SWDATA.sw_levels.map(l=>`<button class="tab ${l.id===level?'on':''}" onclick="go('#swall--${l.id}')">${esc(l.short)}</button>`).join('');
-  app.innerHTML = header({label:'Plan',fn:"go('#home')"}, 'SHEARBLOCKS', `Shear blocking interference — ${esc(LVL.label)}`, '#d99a00') + `
+  app.innerHTML = header({label:'Level',fn:"go('#lvl--"+parseInt(level)+"')"}, 'SHEARBLOCKS', `Shear blocking interference — ${esc(LVL.label)}`, '#d99a00') + `
   <div class="wrap">
     <div class="card"><h2>Level <small>Nivel — tap to switch / toca para cambiar</small></h2><div class="tabs">${lvltabs}</div></div>
     <div class="card"><h2>Overall plan — 8 sections <small>Plano completo – 8 secciones. Tap a section / Toca una sección.</small></h2>
