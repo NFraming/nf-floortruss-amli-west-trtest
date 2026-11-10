@@ -267,6 +267,19 @@ body[data-page="lvl"] [data-n="3"]::before{top:-9px;left:-6px}
 .lvrow{min-height:100px;gap:12px}
 .lvi{font-size:62px;flex:0 0 72px;width:72px;min-width:72px}
 .lvi .sbico{width:66px;height:66px}
+.hdr.notitle .ttl{display:none}
+.plan.big{margin:0 -12px 12px -12px;width:calc(100% + 24px);border-radius:0;border-left:0;border-right:0}
+.plan.big .lbl{font-size:15px;padding:6px 12px}
+.minigrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px 0}
+.mini{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:10px;border:2px solid #15803d;background:#fff;font-weight:900;font-size:16px;color:#111827}
+.mini.pend{border-color:#9ca3af;color:#374151;background:#f3f4f6}
+.mini.ok .st{color:#15803d}
+.mini{min-height:50px}
+.mini.pend{border-color:#b91c1c;background:#fee2e2;color:#7f1d1d}
+.mini{gap:3px;font-size:15px;white-space:nowrap}
+.mini .hg{font-size:26px;line-height:1;vertical-align:middle}
+.plan.big .lbl.pendl{border-color:#b91c1c !important;background:#fee2e2;color:#7f1d1d}
+.plan.big .lbl .hg{font-size:26px;line-height:1;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -394,7 +407,7 @@ function parseRoute(){ const h=(location.hash||'#start').slice(1); const parts=h
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v16'};
+const NF_UPDATE = {n:9, date:'TEST · Nov 10, 2026 · v17'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='start'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -411,7 +424,7 @@ function setBB(which){ for(const k of ['home','secs','all']){ const b=document.g
 /* ---------- views ---------- */
 function render(){ document.body.classList.remove('nf-lock'); { const hb=document.getElementById('nfhint'); if(hb) hb.style.display=(parseRoute().view==='install')?'none':''; } const r=parseRoute(); const app=document.getElementById('app'); NF_LAST[nfMode()]=location.hash||'#home';
   { const bb=document.getElementById('bottombar'); if(bb && nfMode()!=='tr' && bb.dataset.m==='tr'){ bb.innerHTML=BB_ORIG; bb.dataset.m=''; } }
-  { const bb=document.getElementById('bottombar'); if(bb) bb.style.display=(nfMode()==='lv')?'none':''; }
+  { const bb=document.getElementById('bottombar'); if(bb) bb.style.display=(nfMode()==='lv'||nfMode()==='tr')?'none':''; }
   if(/^tr/.test(r.view)){ renderTR(app, r); return; }
   if(r.view==='sec' && SEC[r.arg]) renderSection(app, SEC[r.arg], r.qs);
   else if(r.view==='det' && DET[r.arg]) renderDetail(app, DET[r.arg], r.qs);
@@ -863,7 +876,6 @@ function trLoading(app,back,t1,t2){ app.innerHTML=header(back,t1,t2,trStripe())+
 function trFail(app,err){ app.innerHTML=header({label:'Home',fn:"go('#home')"},'Trusses','Could not load / No se pudo cargar',trStripe())+'<div class="wrap"><div class="card"><div class="empty"><b>Truss data did not load.</b> Open the app once with signal, then try again. / Los datos de trusses no cargaron. Abre la app una vez con señal y vuelve a intentar.<br><small>'+esc(err&&err.message||err)+'</small></div></div></div>'; }
 function renderTR(app,r){
   const view=r.view, p=r.qs.p||[]; const h=location.hash;
-  const bb=document.getElementById('bottombar'); if(bb && bb.dataset.m!=='tr'){ bb.innerHTML=BB_TR; bb.dataset.m='tr'; }
   trLoading(app,{label:'Home',fn:"go('#home')"},'Trusses','Allied Truss layouts · Layouts de Allied Truss');
   trLoad().then(()=>{ if(location.hash!==h) return;
     if(view==='trsec' && TRSEC[p[0]]) trSec(app,TRSEC[p[0]]);
@@ -875,21 +887,19 @@ function renderTR(app,r){
 }
 /* ---------- Trusses home: level group, full plan, section buttons ---------- */
 function trAll(app,g){ g=(g==='567')?'567':'4';
-  const tabs=['4','567'].map(x=>`<button class="tab ${x===g?'on':''}" onclick="go('#trall--${x}')">${trGLabel(x)}</button>`).join('');
-  const labels=DATA.sections.map(s=>{ const id=trId(s.id,g); const t=TRSEC[id]; return `<button class="lbl" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#trsec--${id}')">${esc(t?trName(t):s.label)}${t&&trPend(t)?' ⏳':''}</button>`; }).join('');
+  const labels=DATA.sections.map(s=>{ const id=trId(s.id,g); const t=TRSEC[id]; return `<button class="lbl${t&&trPend(t)?' pendl':''}" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#trsec--${id}')">${esc(t?trName(t):s.label)}${t&&trPend(t)?' <span class="hg">⏳</span>':''}</button>`; }).join('');
   const secs=TRORDER.map(i=>TRSEC[i]).filter(s=>trGroup(s)===g);
-  const grid=secs.map(s=>`<button class="sbtn" onclick="go('#trsec--${s.id}')"><span class="sw" style="background:${trPend(s)?'#c9d0d9':'#d99a00'}"></span><span><span class="n">${esc(trName(s))}</span><br><span class="b">${trPend(s)?'⏳ Pending For Construction set':esc(trSub(s))+' · '+s._marks.length+' trusses'}</span></span></button>`).join('');
-  const nOK=secs.filter(s=>!trPend(s)).length;
-  app.innerHTML=header({label:'Home',fn:"go('#home')"},'TRUSSES','Allied Truss layouts · AMLI West',trStripe())+`
+  const grid=secs.map(s=>`<button class="mini ${trPend(s)?'pend':'ok'}" onclick="go('#trsec--${s.id}')" aria-label="${esc(trName(s))} ${trPend(s)?'pending':'ready'}"><span class="n">${esc(trName(s))}</span><span class="st">${trPend(s)?'<span class="hg">⏳</span>':'✔'}</span></button>`).join('');
+  app.innerHTML=header({label:'Home',fn:"go('#home')"},'','',trStripe())+`
   <div class="wrap">
-    <div class="card"><h2>Level <small>Nivel — tap to switch / toca para cambiar</small></h2><div class="tabs">${tabs}</div>
-      <div class="hint" style="margin:0">${g==='4'?'Level 4 has its own Allied set.':'Allied issued one set per section for Levels 5, 6 and 7 together.'} / ${g==='4'?'El nivel 4 tiene su propio set de Allied.':'Allied emitió un set por sección para los niveles 5, 6 y 7 juntos.'}</div></div>
-    <div class="card"><h2>Overall plan <small>Plano completo — tap a section / toca una sección</small></h2>
-      <div class="plan" id="planTR" onclick="planTapTR(event,'${g}')"><img id="planimgTR" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div></div>
-    <div class="card"><h2>Sections <small>Secciones — ${nOK} of ${secs.length} ready / ${nOK} de ${secs.length} listas</small></h2><div class="grid">${grid}</div></div>
+    <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE ${NF_UPDATE.n} · ${NF_UPDATE.date}</button>
+    <div class="plan big" id="planTR" onclick="planTapTR(event,'${g}')"><img id="planimgTR" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div>
+    <div class="minigrid">${grid}</div>
     <div class="card"><button class="btn sec" onclick="go('#trsearch')">🔎 Search a truss mark (WF29) · Buscar una marca</button></div>
     <div class="foot">Allied Truss · Procore Submittal #277 · For Construction · Approved as Noted · 10/27/26. Design pages are shown exactly as issued (PE-sealed). / Las páginas de diseño se muestran tal como fueron emitidas.</div>
-  </div>`; }
+  </div>`;
+  const hd=app.querySelector('.hdr'); if(hd){ hd.classList.add('notitle'); const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); }
+  nfCheck(); }
 function planTapTR(ev,g){ const img=document.getElementById('planimgTR'); const r=img.getBoundingClientRect();
   const x=(ev.clientX-r.left)/r.width, y=(ev.clientY-r.top)/r.height; if(x<0||y<0||x>1||y>1) return;
   const done=(c)=>{ const W=c.width,H=c.height; const px=c.getContext('2d').getImageData(Math.floor(x*W),Math.floor(y*H),1,1).data[0]; let k=0;
