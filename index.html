@@ -264,6 +264,9 @@ body[data-page="lvl"] [data-n="4"]::before{top:-6px;left:-24px}
 body[data-page="lvl"] [data-n="2"]::before{top:8px;left:auto;right:8px}
 body[data-page="lvl"] [data-n="3"]::before{top:-9px;left:-6px}
 .lvi .sbico{display:block;margin:0 auto}
+.lvrow{min-height:100px;gap:12px}
+.lvi{font-size:62px;flex:0 0 72px;width:72px;min-width:72px}
+.lvi .sbico{width:66px;height:66px}
 </style>
 </head>
 <body>
@@ -391,7 +394,7 @@ function parseRoute(){ const h=(location.hash||'#start').slice(1); const parts=h
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v15'};
+const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v16'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='start'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
