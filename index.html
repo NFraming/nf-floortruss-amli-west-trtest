@@ -300,7 +300,7 @@ function parseRoute(){ const h=(location.hash||'#home').slice(1); const parts=h.
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 9, 2026'};
+const NF_UPDATE = {n:7, date:'TEST · Nov 9, 2026 · v2'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -738,6 +738,7 @@ function trDet(app,s,label){ const m=s.marks[label]; const g=trGroup(s); const i
     <div class="card"><h2>Allied design page <small>Página de diseño de Allied — as issued, PE-sealed / tal como se emitió, con sello PE</small></h2>
       ${imgs.length>1?`<div class="tabs">${imgs.map((u,k)=>`<button class="tab ${k===0?'on':''}" onclick="trDetTab(${k})">Page ${k+1} of ${imgs.length}</button>`).join('')}</div>`:''}
       <div class="viewer" id="v-trdet"></div>
+      ${m.layout_label?`<div class="hint" style="border-left:4px solid #d99a00">The layout sheet prints this mark as ${esc(m.layout_label)}. The design page is ${esc(label)}. Confirm with Allied. / El layout imprime esta marca como ${esc(m.layout_label)}. La página de diseño es ${esc(label)}. Confirmar con Allied.</div>`:''}
       <div class="hint">No signal and the page does not open? This section was not saved: go to the section and tap Save. / Sin señal y no abre? Esta sección no se guardó: entra a la sección y toca Guardar.</div>
       ${(m.pos&&m.pos.length)?`<div style="margin-top:8px"><button class="btn sec small" onclick="go('#trlay--${s.id}--${label}')">Show on layout · Ver en el layout</button></div>`:'<div class="hint">This mark is not printed as text on the layout sheet; find it from the list. / Esta marca no está impresa como texto en el layout; búscala en la lista.</div>'}
     </div>
