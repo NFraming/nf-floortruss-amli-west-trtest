@@ -247,6 +247,13 @@ details.notes li .es{display:block;color:var(--muted);font-size:12.5px}
 .qrfoot{display:flex;align-items:center;gap:12px;text-align:left;margin:14px 0 4px 0;font-size:13px;color:#374151}
 .qrfoot svg{flex:none;width:132px;height:132px;border:1px solid var(--line);border-radius:6px}
 .qrfoot b{display:block;font-size:16px;color:#111827;margin-bottom:2px}
+/* UPDATE 7 TEST v12: page 3 numbers */
+body[data-page="lvl"] [data-n]::before{top:-9px;left:-6px;right:auto}
+body[data-page="lvl"] .trtest[data-n]::before{top:6px;left:6px}
+body[data-page="lvl"] #app .foot[data-n]::before{top:-22px;left:0}
+body[data-page="lvl"] [data-n="2"]::before{top:-12px;left:2px}
+body[data-page="lvl"] [data-n="3"]::before{top:-17px;left:6px}
+body[data-page="lvl"] [data-n="5"]::before{top:-6px;left:-24px}
 </style>
 </head>
 <body>
@@ -374,7 +381,7 @@ function parseRoute(){ const h=(location.hash||'#start').slice(1); const parts=h
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v11'};
+const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v12'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='start'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -584,7 +591,10 @@ const NF_NUMS=[['.trtest',1],['#app .hdr .row',2],['#app .hdr .upd',3],['#nfstbo
   ['.fgrid .fbtn:nth-child(5)',10],['.fgrid .fbtn:nth-child(6)',11],['.fgrid .fbtn:nth-child(7)',12],
   ['#instcard .ibtn',13],['#instcard > .btn.sec',14],['#app .hbtn',15],['#app .foot',16],['#nfhint',17]];
 const NF_NUMS_P1=[['.trtest',1],['#startlogo',2],['#p-amli',3],['#p-c1',4],['#p-c2',5],['#p-c3',6],['#nfhint',7]];
-function nfNumber(){ (parseRoute().view==='start'?NF_NUMS_P1:NF_NUMS).forEach(([q,n])=>{ const e=document.querySelector(q); if(e) e.setAttribute('data-n',n); }); }
+const NF_NUMS_P3=[['.trtest',1],['#app .hdr .row',2],['#app .hdr .upd',3],['#nfstbox',4],['#app .wrap > .card:first-child h2',5],
+  ['#app .wrap > .card:first-child .sbtn:nth-of-type(1)',6],['#app .wrap > .card:first-child .sbtn:nth-of-type(2)',7],['#app .wrap > .card:first-child .sbtn:nth-of-type(3)',8],
+  ['#app .wrap > .card:first-child .sbtn:nth-of-type(4)',9],['#app .wrap > .card:first-child .sbtn:nth-of-type(5)',10],['#flsave',11],['#app .foot',12],['#nfhint',13]];
+function nfNumber(){ const v=parseRoute().view; document.body.setAttribute('data-page',v); (v==='start'?NF_NUMS_P1:(v==='lvl'?NF_NUMS_P3:NF_NUMS)).forEach(([q,n])=>{ const e=document.querySelector(q); if(e) e.setAttribute('data-n',n); }); }
 /* Update status box (Jorge's sketch): green = latest version, yellow = new version found / updating, red = no signal (cannot check), grey = checking or not saved yet */
 const NF_ST={
   g:'Up to date',
@@ -635,7 +645,7 @@ function renderLevel(app,n){ n=+n; const L=NF_LEVELS.find(x=>x.n===n); if(!L){ g
     <div class="foot">${ORD[n]} Floor · Piso ${n}</div>
   </div>`;
   const up=app.querySelector('.hdr .upd'); if(up){ const bx=document.createElement('span'); bx.className='stbox c'; bx.id='nfstbox'; up.appendChild(bx); up.parentNode.style.justifyContent='flex-end'; }
-  nfCheck(); if(n!==3) flPaint(n);
+  nfCheck(); if(n!==3) flPaint(n); nfNumber();
 }
 /* ---------- Save a whole floor offline: all ready Allied design pages of the floor's group (L4, or L5-6-7 which share one set) ---------- */
 let FLBUSY={};
