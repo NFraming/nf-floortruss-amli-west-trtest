@@ -184,6 +184,21 @@ details.notes li .es{display:block;color:var(--muted);font-size:12.5px}
 .lvlbtn.off{background:#fff;color:#4b5563;border-color:var(--line)}
 .sbtn[disabled]{opacity:.9!important}
 .sbtn[disabled] .n{color:#374151}
+
+/* UPDATE 7 TEST v4: Home from Jorge's sketch */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:minmax(92px,auto);gap:10px;margin:0 0 12px 0}
+.fbtn{display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:left;border-radius:14px;border:2px solid var(--nf2);background:var(--nf);color:var(--ink);padding:10px 12px;min-height:92px}
+.fbtn b{font-size:21px;font-weight:900;line-height:1.1}
+.fbtn span{font-size:13px;font-weight:700}
+.fbtn small{font-size:12px;font-weight:600;line-height:1.25;margin-top:2px}
+.fbtn.off{background:#fff;color:#374151;border-color:var(--line);opacity:1}
+.fbtn.off b{font-size:16px}
+.fbtn[disabled]{opacity:1}
+.nfstat{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 12px 0;padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:#fff;color:#111827;text-align:left;font-size:13px;font-weight:700;line-height:1.3}
+.nfstat.g{border-color:#15803d}.nfstat.y{border-color:#a16207}.nfstat.r{border-color:#b91c1c}
+.stbox{display:inline-block;flex:0 0 auto;width:20px;height:20px;border-radius:5px;border:2px solid #111827;vertical-align:middle;background:#d1d5db}
+.stbox.g{background:#16a34a}.stbox.y{background:#facc15}.stbox.r{background:#dc2626}.stbox.c,.stbox.n{background:#d1d5db}
+.hdr .upd .stbox{width:14px;height:14px;margin-left:6px;border-width:1.5px;border-radius:4px;position:relative;top:-1px}
 </style>
 </head>
 <body>
@@ -311,7 +326,7 @@ function parseRoute(){ const h=(location.hash||'#home').slice(1); const parts=h.
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:7, date:'TEST · Nov 9, 2026 · v3'};
+const NF_UPDATE = {n:7, date:'TEST · Nov 10, 2026 · v4'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -486,16 +501,42 @@ const NF_LEVELS=[
   {n:7, tr:'567',  conn:false, sw:null}];
 function nfLvlTypes(L){ const a=[]; if(L.tr) a.push('Truss layout'); if(L.conn) a.push('Connections'); if(L.sw) a.push('Shear blocks'); return a; }
 function renderHome(app){ setBB(''); const T=DATA.title;
-  const btns=NF_LEVELS.map(L=>{ const av=nfLvlTypes(L);
-    return `<button class="lvlbtn${av.length?'':' off'}" onclick="go('#lvl--${L.n}')"><span class="ln"><small>LEVEL · NIVEL</small>${L.n}</span><span class="lt">${av.length?av.join(' · '):'Not loaded yet<br>Aún no cargado'}</span><span class="lc">›</span></button>`; }).join('');
-  app.innerHTML = header(null, 'AMLI WEST – FLOOR TRUSSES', esc(T.job)+' · '+esc(T.company), '#d99a00') + `
+  const ORD={4:'4th',5:'5th',6:'6th',7:'7th'};
+  const fl=n=>{ const L=NF_LEVELS.find(x=>x.n===n); const av=nfLvlTypes(L);
+    return `<button class="fbtn" style="grid-column:1;grid-row:${n-3}" onclick="go('#lvl--${n}')"><b>${ORD[n]} Floor</b><span>Piso ${n}</span><small>${av.join(' · ')}</small></button>`; };
+  const pend=(en,es,row)=>`<button class="fbtn off" style="grid-column:2;grid-row:${row}" disabled><b>${en}</b><span>${es}</span><small>Not loaded yet<br>Aún no cargado</small></button>`;
+  app.innerHTML = header(null, 'FLOOR TRUSS', esc(T.job)+' · '+esc(T.company), '#d99a00') + `
   <div class="wrap">
-    <div class="card"><h2>Levels <small>Niveles — tap a level / toca un nivel</small></h2><div class="lvls">${btns}</div></div>
-    <div class="card"><button class="btn sec" onclick="go('#trsearch')">🔎 Search a truss mark (WF29) · Buscar una marca</button></div>
+    <button class="nfstat c" id="nfstat" onclick="nfCheck()"><span class="stbox c"></span><span class="sttx">Checking… · Verificando…</span></button>
+    <div class="fgrid">${fl(4)}${fl(5)}${fl(6)}${fl(7)}${pend('Roof trusses','Trusses de techo',2)}${pend('Floor joist profiles','Perfiles de floor joist',3)}${pend('Roof truss profiles','Perfiles de trusses de techo',4)}</div>
     ${installBanner()}${installCard()}${howCard()}
-    <div class="foot">National Framing · AMLI West. Tap a level to see its files. / Toca un nivel para ver sus archivos.</div>
+    <div class="foot">National Framing · AMLI West. Tap a floor to see its files. / Toca un piso para ver sus archivos.</div>
   </div>`;
+  const up=app.querySelector('.hdr .upd'); if(up){ const bx=document.createElement('span'); bx.className='stbox c'; bx.id='nfstbox'; up.appendChild(bx); up.parentNode.style.justifyContent='flex-end'; }
+  nfCheck();
 }
+/* Update status box (Jorge's sketch): green = latest version, yellow = new version found / updating, red = no signal (cannot check), grey = checking or not saved yet */
+const NF_ST={
+  g:'Up to date · Al día',
+  y:'New version found — updating… · Versión nueva — actualizando…',
+  r:'No signal — showing the version saved on this phone · Sin señal — se muestra la versión guardada en el teléfono',
+  c:'Checking… · Verificando…',
+  n:'Open once with signal to save the app · Ábrela una vez con señal para guardarla'};
+function nfSetSt(k){ const bx=document.getElementById('nfstbox'), st=document.getElementById('nfstat'); if(!st) return;
+  if(bx) bx.className='stbox '+k; st.className='nfstat '+k; st.querySelector('.stbox').className='stbox '+k; st.querySelector('.sttx').textContent=NF_ST[k]; st.dataset.s=k; }
+async function nfCheck(){ nfSetSt('c');
+  try{
+    if(!('serviceWorker' in navigator)){ nfSetSt('n'); return; }
+    if(navigator.onLine===false){ nfSetSt('r'); return; }
+    let reg=await navigator.serviceWorker.getRegistration();
+    if(!reg){ await new Promise(r=>setTimeout(r,2500)); reg=await navigator.serviceWorker.getRegistration(); }
+    if(!reg){ nfSetSt('n'); return; }
+    await reg.update();
+    nfSetSt((reg.installing||reg.waiting)?'y':'g');
+  }catch(e){ nfSetSt(navigator.onLine===false?'r':'r'); }
+}
+window.addEventListener('online',()=>{ if(document.getElementById('nfstat')) nfCheck(); });
+window.addEventListener('offline',()=>{ if(document.getElementById('nfstat')) nfSetSt('r'); });
 function renderLevel(app,n){ n=+n; const L=NF_LEVELS.find(x=>x.n===n); if(!L){ go('#home'); return; } setBB('');
   let rows='';
   if(n===3){
