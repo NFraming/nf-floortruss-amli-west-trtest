@@ -335,7 +335,7 @@ function makeViewer(el, srcKey, opts){
   const ctl=document.createElement('div'); ctl.className='ctl';
   ctl.innerHTML='<button class="wide" data-a="fit" title="Fit">FIT</button><button data-a="minus">−</button><button data-a="plus">+</button><button class="wide" data-a="tall">⤢</button>';
   let scale=1,minS=1,tx=0,ty=0,iw=0,ih=0,cw=0,ch=0;
-  const CTRL_RESERVE=60; /* px reserved at the bottom of the viewer so the FIT/-/+/expand controls never sit on top of the sheet (table/notes); fit() treats this as outside the usable image area, and clamp() uses the same ch, so panning can never slide content under the controls either. */
+  const CTRL_RESERVE=opts.noctl?0:60; /* px reserved at the bottom of the viewer so the FIT/-/+/expand controls never sit on top of the sheet (table/notes); fit() treats this as outside the usable image area, and clamp() uses the same ch, so panning can never slide content under the controls either. */
   const ptrs=new Map(); let pinch=null, lastTap=0, moved=0, downPt=null;
   function apply(){ const t=`translate(${tx}px,${ty}px) scale(${scale})`; img.style.transform=t; ov.style.transform=t;
     /* At fit scale there is nothing to pan (the whole image already fits), so let the browser
@@ -366,7 +366,7 @@ function makeViewer(el, srcKey, opts){
         b.addEventListener('click',e=>{ e.stopPropagation(); if(Date.now()-(window._navAt||0)>700) go(t.href); });
         ov.appendChild(b); });
       el.appendChild(ov); }
-    el.appendChild(ctl);
+    if(!opts.noctl) el.appendChild(ctl);
     const xb=document.createElement('button'); xb.className='xfull'; xb.innerHTML='✕ Close · Cerrar'; xb.setAttribute('aria-label','Close full screen / Cerrar pantalla completa');
     xb.addEventListener('pointerdown',e=>e.stopPropagation()); xb.addEventListener('click',()=>setFull(false)); el.appendChild(xb);
     if(!el.classList.contains('tall')){ const cwid=el.clientWidth; el.style.height=Math.round(Math.min(Math.max(cwid*ih/iw,260),window.innerHeight*0.80))+'px'; }
@@ -410,7 +410,7 @@ function parseRoute(){ const h=(location.hash||'#start').slice(1); const parts=h
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:9, date:'TEST · Nov 10, 2026 · v20'};
+const NF_UPDATE = {n:9, date:'TEST · Nov 10, 2026 · v21'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='start'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -871,21 +871,26 @@ function trName(s){ return s.building==='5'?'Bldg 5':s.building+s.section; }
 function trSub(s){ return s.building==='5'?'Building #5':('Building #'+s.building+' · Section '+s.section); }
 function trGroup(s){ return s.level==='4'?'4':'567'; }
 function trGLabel(g){ return g==='4'?'Level 4':'Levels 5-6-7'; }
+function trLvlLbl(g){ return g==='4'?'Level 4':((NF_PLANLVL>=5&&NF_PLANLVL<=7)?'Level '+NF_PLANLVL:'Levels 5-6-7'); }
 function trId(dataId,g){ return (g==='4'?'L4-':'L567-')+(dataId==='5AB'?'B5':dataId); }
 function trDataId(s){ return s.building==='5'?'5AB':(s.building+s.section); }
 function trPend(s){ return s.status!=='ready'; }
 function trStripe(){ return '#d99a00'; }
 function trLoading(app,back,t1,t2){ app.innerHTML=header(back,t1,t2,trStripe())+'<div class="wrap"><div class="card"><div class="empty">Loading truss data… / Cargando datos de trusses…</div></div></div>'; }
 function trFail(app,err){ app.innerHTML=header({label:'Home',fn:"go('#home')"},'Trusses','Could not load / No se pudo cargar',trStripe())+'<div class="wrap"><div class="card"><div class="empty"><b>Truss data did not load.</b> Open the app once with signal, then try again. / Los datos de trusses no cargaron. Abre la app una vez con señal y vuelve a intentar.<br><small>'+esc(err&&err.message||err)+'</small></div></div></div>'; }
+function trUpd(app){ const hd=app.querySelector('.hdr'); if(hd){ const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); }
+  const w=app.querySelector('.wrap'); if(w && !document.getElementById('nfstat')) w.insertAdjacentHTML('afterbegin','<button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE '+NF_UPDATE.n+' · '+NF_UPDATE.date+'</button>'); nfCheck(); }
 function renderTR(app,r){
   const view=r.view, p=r.qs.p||[]; const h=location.hash;
   trLoading(app,{label:'Home',fn:"go('#home')"},'Trusses','Allied Truss layouts · Layouts de Allied Truss');
   trLoad().then(()=>{ if(location.hash!==h) return;
     if(view==='trsec' && TRSEC[p[0]]) trSec(app,TRSEC[p[0]]);
     else if(view==='trlay' && TRSEC[p[0]]) trLay(app,TRSEC[p[0]],p[1]);
+    else if(view==='trmore' && TRSEC[p[0]]) trMore(app,TRSEC[p[0]],"go('#trsec--"+p[0]+"')");
     else if(view==='trdet' && TRSEC[p[0]] && TRSEC[p[0]].marks[p[1]]) trDet(app,TRSEC[p[0]],p[1]);
     else if(view==='trsearch') trSearch(app,decodeURIComponent(p[0]||''));
-    else trAll(app,p[0],p[1]); }).catch(e=>{ if(location.hash===h) trFail(app,e); });
+    else trAll(app,p[0],p[1]);
+    if(view==='trsec'||view==='trlay'||view==='trmore') trUpd(app); }).catch(e=>{ if(location.hash===h) trFail(app,e); });
   window.scrollTo(0,0);
 }
 /* ---------- Trusses home: level group, full plan, section buttons ---------- */
@@ -913,13 +918,14 @@ function planTapTR(ev,g){ const img=document.getElementById('planimgTR'); const 
   const im=new Image(); im.onload=()=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); idxCanvas=c; done(c); }; im.src=imgSrc('fullplan_index'); }
 /* ---------- Section menu (Karla's structure: layout / connections / shear blocks / repairs) ---------- */
 function trMenuRow(ico,en,es,sub,onclick,dis){ return `<button class="sbtn" style="width:100%;margin:0 0 10px 0${dis?';opacity:.6':''}" ${dis?'disabled':`onclick="${onclick}"`}><span style="font-size:26px;flex:0 0 auto">${ico}</span><span><span class="n" style="font-size:16px">${en}</span><br><span class="b">${es}</span><br><span class="b">${sub}</span></span></button>`; }
-function trSec(app,s){ const g=trGroup(s), cid=trDataId(s);
+function trSec(app,s){ if(trPend(s)) trMore(app,s); else trLay(app,s,null); }
+function trMore(app,s,bk){ const g=trGroup(s), cid=trDataId(s);
   const hasConn=(g==='4' && SEC[cid]);
   const swLv=(g==='4'?['4th']:['5th','6th']).filter(l=>SWDATA.sw_imgs && SWDATA.sw_imgs[l] && SWDATA.sw_imgs[l][cid]);
   let rows='';
   rows+= trPend(s)
    ? trMenuRow('⏳','Truss layout','Layout de trusses','Pending For Construction set — Allied has not issued it yet / Pendiente: Allied aún no lo emite','',true)
-   : trMenuRow('📐','Truss layout','Layout de trusses',s._marks.length+' trusses · tap a truss for Allied\'s sealed design page / toca un truss para ver su página de diseño',`go('#trlay--${s.id}')`);
+   : '';
   rows+= hasConn
    ? trMenuRow('🔩','Truss connections','Conexiones de trusses','Connections to walls, posts, etc. / Conexiones a paredes, postes, etc.',`go('#sec--${cid}')`)
    : trMenuRow('🔩','Truss connections','Conexiones de trusses','Pending — only Level 4 is in the app today / Pendiente: hoy solo está el nivel 4','',true);
@@ -927,14 +933,12 @@ function trSec(app,s){ const g=trGroup(s), cid=trDataId(s);
     if(swLv.length>1) rows+=`<div class="tabs" id="swpick" style="display:none">${swLv.map(l=>`<button class="tab" onclick="go('#swsec--${l}--${cid}')">${l} level</button>`).join('')}</div>`; }
   else rows+= trMenuRow('🧱','Shear blocks locations','Ubicación de shear blocks','Pending / Pendiente','',true);
   rows+= trMenuRow('🛠','Repairs & RFI changes','Reparaciones y cambios por RFI','None posted yet for this section / Ninguno publicado para esta sección','',true);
-  app.innerHTML=header({label:'Levels',fn:`go('#trall--${g}')`},`Trusses — ${esc(trName(s))}`,`${esc(trSub(s))} · ${trGLabel(g)}`,trStripe())+`
+  app.innerHTML=header(bk?{label:'Layout',fn:bk}:{label:'Plan',fn:`go('#trall--${g}--${NF_PLANLVL||(g==='4'?4:5)}')`},`More — ${esc(trName(s))}`,`${esc(trSub(s))} · ${trLvlLbl(g)}`,trStripe())+`
   <div class="wrap">
     ${trPend(s)?`<div class="card" style="border:3px solid #c9850a;background:#fff4c2"><h2>⏳ Pending For Construction set <small>Pendiente set For Construction</small></h2><div>Allied has not issued the For Construction set for ${esc(trName(s))} at ${trGLabel(g)} (it is not in Submittal #277). It will be added when Allied issues it. / Allied aún no ha emitido el set For Construction de ${esc(trName(s))} en ${trGLabel(g)} (no está en el Submittal #277). Se agregará cuando lo emita.</div></div>`:''}
     <div class="card"><h2>Drawings <small>Planos</small></h2>${rows}</div>
-    ${trPend(s)?'':`<div class="card" id="trsave"></div>`}
     <div class="foot">Allied Truss · Submittal #277 · ${g==='4'?'Level 4':'Levels 5-6-7'}</div>
-  </div>`;
-  if(!trPend(s)) trPaintSave(s.id); }
+  </div>`; }
 function trPickSW(cid){ const e=document.getElementById('swpick'); if(e) e.style.display=(e.style.display==='none'?'flex':'none'); }
 /* ---------- Layout sheet with tappable truss marks ---------- */
 function trTaps(s,hl){ const W=s.layout_px[0], H=s.layout_px[1], mw=40/W, mh=40/H; const out=[];
@@ -943,17 +947,19 @@ function trTaps(s,hl){ const W=s.layout_px[0], H=s.layout_px[1], mw=40/W, mh=40/
   return out.sort((a,b)=>b.a-a.a); }
 function trLay(app,s,hl){ const g=trGroup(s); const m=hl&&s.marks[hl]; let init=null;
   if(m && m.pos && m.pos[0]){ const q=m.pos[0]; init={scale:6,x:((q[0]+q[2])/2)*s.layout_px[0],y:((q[1]+q[3])/2)*s.layout_px[1]}; }
-  app.innerHTML=header({label:'Section '+trName(s),fn:`go('#trsec--${s.id}')`},`Truss layout — ${esc(trName(s))}`,`${esc(trSub(s))} · ${trGLabel(g)}${hl?' · '+esc(hl):''}`,trStripe())+`
+  app.innerHTML=header({label:'Plan',fn:`go('#trall--${g}--${NF_PLANLVL||(g==='4'?4:5)}')`},`Truss layout — ${esc(trName(s))}`,`${esc(trSub(s))} · ${trLvlLbl(g)}${hl?' · '+esc(hl):''}`,trStripe())+`
   <div class="wrap">
-    <div class="card"><h2>Layout sheet <small>Hoja de layout — pinch to zoom, then tap a yellow box / pellizca para acercar y toca un recuadro amarillo</small></h2><div class="viewer" id="v-trlay"></div>
-      <div class="hint">Truss labels are small: zoom in first. Or pick the truss from the list below. / Las etiquetas son pequeñas: acerca primero, o elige el truss de la lista de abajo.</div></div>
-    <div class="card"><h2>Trusses in this section <small>${s._marks.length} marks / marcas</small></h2>
-      <input class="srch" id="trfilter" placeholder="Filter / Filtrar (WF29, W4B…)" oninput="trFilter('${s.id}')" autocomplete="off" autocapitalize="characters">
+    <button class="btn more" style="margin:0 0 12px 0" onclick="go('#trmore--${s.id}')">More: Connections · Shear blocks · RFI's · Repairs ▶</button>
+    <div class="card"><h2>Layout sheet <small>Pinch to zoom, then tap a yellow box</small></h2><div class="viewer" id="v-trlay"></div>
+      <div class="hint">Truss labels are small: zoom in first, or pick the truss from the list below.</div></div>
+    <div class="card"><h2>Trusses in this section <small>${s._marks.length} marks</small></h2>
+      <input class="srch" id="trfilter" placeholder="Filter (WF29, W4B…)" oninput="trFilter('${s.id}')" autocomplete="off" autocapitalize="characters">
       <div id="trlist" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
+    <div class="card" id="trsave"></div>
   </div>`;
-  makeViewer(document.getElementById('v-trlay'), TR_BASE+s.layout_img, {taps:trTaps(s,hl), initial:init}); trFilter(s.id); }
+  makeViewer(document.getElementById('v-trlay'), TR_BASE+s.layout_img, {taps:trTaps(s,hl), initial:init, noctl:true}); trFilter(s.id); trPaintSave(s.id); }
 function trFilter(id){ const s=TRSEC[id], q=(document.getElementById('trfilter').value||'').trim().toUpperCase();
-  document.getElementById('trlist').innerHTML=s._marks.filter(m=>!q||String(m.label).toUpperCase().indexOf(q)>=0).map(m=>`<span class="pill" onclick="go('#trdet--${id}--${m.label}')">${esc(m.label)}${m.qty!=null?' ×'+m.qty:''}</span>`).join('')||'<span class="empty">No match / Sin resultados</span>'; }
+  document.getElementById('trlist').innerHTML=s._marks.filter(m=>!q||String(m.label).toUpperCase().indexOf(q)>=0).map(m=>`<span class="pill" onclick="go('#trdet--${id}--${m.label}')">${esc(m.label)}${m.qty!=null?' ×'+m.qty:''}</span>`).join('')||'<span class="empty">No match</span>'; }
 /* ---------- Allied design page for one truss ---------- */
 function trDet(app,s,label){ const m=s.marks[label]; const g=trGroup(s); const i=s._marks.indexOf(m); const prev=i>0?s._marks[i-1]:null, next=i<s._marks.length-1?s._marks[i+1]:null;
   const imgs=(m.imgs&&m.imgs.length)?m.imgs:[m.img];
@@ -988,11 +994,11 @@ async function trSavedCount(s){ if(!('caches' in window)) return -1; try{ const 
 async function trPaintSave(id){ const s=TRSEC[id], box=document.getElementById('trsave'); if(!box) return; const n=await trSavedCount(s); if(!document.getElementById('trsave')) return;
   const tot=s._urls.length, size=trFmt(s.designs_bytes);
   let body;
-  if(n<0) body=`<div class="hint" style="margin:0">Saving on the phone is not available in this browser. / Guardar en el teléfono no está disponible en este navegador.</div>`;
+  if(n<0) body=`<div class="hint" style="margin:0">Saving on the phone is not available in this browser.</div>`;
   else if(TRBUSY[id]) body=`<div id="trprog" style="font-weight:800">Saving… ${TRBUSY[id].done} of ${tot}</div>`;
-  else if(n>=tot) body=`<div style="font-weight:800;color:var(--ok)">✔ Saved on this phone · Guardado en el teléfono</div><div class="hint">All ${tot} truss design pages of this section work with no signal. / Las ${tot} páginas de diseño de esta sección funcionan sin señal.</div><button class="btn sec" style="margin-top:8px" onclick="trRemove('${id}')">Remove from phone · Quitar del teléfono</button>`;
-  else body=`<button class="btn" onclick="trSave('${id}')"><span>⬇ Save this section offline · ${size}<br><small style="font-weight:600">Guardar esta sección sin señal · ${tot} pages / páginas${n>0?' · '+n+' already saved / ya guardadas':''}</small></span></button><div class="hint">Do this once with Wi-Fi or good signal. / Hazlo una vez con Wi-Fi o buena señal.</div>`;
-  box.innerHTML=`<h2>Offline <small>Sin señal</small></h2><div class="hint" style="margin:0 0 8px 0">The layout sheet and truss positions are always saved on the phone. / La hoja de layout y las posiciones de los trusses siempre están guardadas en el teléfono.</div>`+body; }
+  else if(n>=tot) body=`<div style="font-weight:800;color:var(--ok)">✔ Saved on this phone</div><div class="hint">All ${tot} truss design pages of this section work with no signal.</div><button class="btn sec" style="margin-top:8px" onclick="trRemove('${id}')">Remove from phone</button>`;
+  else body=`<button class="btn" onclick="trSave('${id}')"><span>⬇ Save this section offline · ${size}<br><small style="font-weight:600">${tot} pages${n>0?' · '+n+' already saved':''}</small></span></button><div class="hint">Do this once with Wi-Fi or good signal.</div>`;
+  box.innerHTML=`<h2>Offline</h2><div class="hint" style="margin:0 0 8px 0">The layout sheet and truss positions are always saved on the phone.</div>`+body; }
 async function trSave(id){ const s=TRSEC[id]; if(TRBUSY[id]) return; TRBUSY[id]={done:0,fail:0};
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   const c=await caches.open(TR_CACHE); const have=new Set((await c.keys()).map(r=>r.url)); const todo=s._urls.filter(u=>!have.has(trAbs(u))); TRBUSY[id].done=s._urls.length-todo.length; trPaintSave(id);
