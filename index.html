@@ -409,7 +409,7 @@ function parseRoute(){ const h=(location.hash||'#start').slice(1); const parts=h
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:9, date:'TEST · Nov 10, 2026 · v18'};
+const NF_UPDATE = {n:9, date:'TEST · Nov 10, 2026 · v19'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='start'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -897,8 +897,8 @@ function trAll(app,g){ g=(g==='567')?'567':'4';
     <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE ${NF_UPDATE.n} · ${NF_UPDATE.date}</button>
     <div class="plan big" id="planTR" onclick="planTapTR(event,'${g}')"><img id="planimgTR" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div>
     <div class="minigrid">${grid}</div>
-    <div class="card"><button class="btn sec" onclick="go('#trsearch')">🔎 Search a truss mark (WF29) · Buscar una marca</button></div>
-    <div class="foot">Allied Truss · Procore Submittal #277 · For Construction · Approved as Noted · 10/27/26. Design pages are shown exactly as issued (PE-sealed). / Las páginas de diseño se muestran tal como fueron emitidas.</div>
+    <div class="card"><button class="btn sec" onclick="go('#trsearch')">🔎 Search a truss mark (WF29)</button></div>
+    <div class="foot">Allied Truss · Procore Submittal #277 · For Construction · Approved as Noted · 10/27/26. Design pages are shown exactly as issued (PE-sealed).</div>
   </div>`;
   const hd=app.querySelector('.hdr'); if(hd){ hd.classList.add('notitle'); const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); }
   nfCheck(); }
