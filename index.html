@@ -263,7 +263,7 @@ body[data-page="lvl"] [data-n="4"]::before{top:-6px;left:-24px}
 .lvi{font-size:48px;line-height:1;flex:0 0 58px;width:58px;min-width:58px;text-align:center;overflow:hidden}
 .lvrow .n{font-size:22px;line-height:1.15;font-weight:900}
 .lvrow .b{font-size:15px;color:#4b5563}
-#flsave h2{font-size:24px}
+#flsave h2,#trsave h2{font-size:24px}
 body[data-page="lvl"] [data-n="2"]::before{top:8px;left:auto;right:8px}
 body[data-page="lvl"] [data-n="3"]::before{top:-9px;left:-6px}
 .lvi .sbico{display:block;margin:0 auto}
@@ -282,6 +282,8 @@ body[data-page="lvl"] [data-n="3"]::before{top:-9px;left:-6px}
 .mini{gap:3px;font-size:15px;white-space:nowrap}
 .mini .hg{font-size:26px;line-height:1;vertical-align:middle}
 .plan.big .lbl.pendl{border-color:#b91c1c !important;background:#fee2e2;color:#7f1d1d}
+.ovcap{margin:0 0 8px 0;text-align:center;font-weight:900;font-size:18px;color:#111827}.ovcap span{display:block;font-weight:600;font-size:13px;color:#374151}
+.ovtabs{display:flex;gap:6px;margin:0 0 8px 0}.ovtabs .tab{flex:1}
 .plan.big .lbl .hg{font-size:26px;line-height:1;vertical-align:middle}
 </style>
 </head>
@@ -410,7 +412,7 @@ function parseRoute(){ const h=(location.hash||'#start').slice(1); const parts=h
   else { if(view==='det'&&arg) arg=decId(arg); if(parts[2]) qs.from=parts[2]; }
   return {view, arg, qs}; }
 /* UPDATE BADGE - edit ONLY this line on every release (number goes up by 1, date = release day). Also bump CACHE_VERSION in service-worker.js. */
-const NF_UPDATE = {n:9, date:'TEST · Nov 11, 2026 · v26'};
+const NF_UPDATE = {n:27, date:'TEST · Nov 13, 2026 · 4D'};
 /* ---- Connections | Shearblocks switch in the top bar (UPDATE 3) ---- */
 const NF_LAST = {conn:null, sw:null, tr:null};
 function nfMode(){ const v=(location.hash||'#home').slice(1).split('--')[0]; if(v===''||v==='home'||v==='start'||v==='lvl') return 'lv'; return /^sw/.test(v)?'sw':(/^tr/.test(v)?'tr':'conn'); }
@@ -429,16 +431,16 @@ function render(){ document.body.classList.remove('nf-lock'); { const hb=documen
   { const bb=document.getElementById('bottombar'); if(bb && nfMode()!=='tr' && bb.dataset.m==='tr'){ bb.innerHTML=BB_ORIG; bb.dataset.m=''; } }
   { const bb=document.getElementById('bottombar'); if(bb) bb.style.display=(nfMode()==='lv'||nfMode()==='tr')?'none':''; }
   if(/^tr/.test(r.view)){ renderTR(app, r); return; }
-  if(r.view==='sec' && SEC[r.arg]) renderSection(app, SEC[r.arg], r.qs);
-  else if(r.view==='det' && DET[r.arg]) renderDetail(app, DET[r.arg], r.qs);
+  if(r.view==='sec' && SEC[r.arg]){ renderSection(app, SEC[r.arg], r.qs); nfP6(app); }
+  else if(r.view==='det' && DET[r.arg]){ renderDetail(app, DET[r.arg], r.qs); nfP6(app); }
   else if(r.view==='start') renderStart(app);
   else if(r.view==='how') renderHow(app);
   else if(r.view==='install') renderInstall(app);
-  else if(r.view==='all') renderAll(app, r.qs);
-  else if(r.view==='swsec' && SEC_SW[r.arg]) renderSWSection(app, SEC_SW[r.arg], r.qs.level, r.qs);
-  else if(r.view==='swdet' && DET_SW[r.arg]) renderSWDetail(app, DET_SW[r.arg], r.qs.level, r.qs);
+  else if(r.view==='all'){ renderAll(app, r.qs); nfP6(app); }
+  else if(r.view==='swsec' && SEC_SW[r.arg]){ renderSWSection(app, SEC_SW[r.arg], r.qs.level, r.qs); nfP6(app); }
+  else if(r.view==='swdet' && DET_SW[r.arg]){ renderSWDetail(app, DET_SW[r.arg], r.qs.level, r.qs); nfP6(app); }
   else if(r.view==='swall') renderSWAll(app, r.qs.level, r.qs);
-  else if(r.view==='conn') renderConnHome(app);
+  else if(r.view==='conn'){ renderConnHome(app); nfP6(app); }
   else if(r.view==='lvl') renderLevel(app, r.arg);
   else renderHome(app);
 }
@@ -564,43 +566,54 @@ function renderInstall(app){ setBB('');
     <div style="height:10px"></div><button class="btn" onclick="go('#start')">◀ Projects</button>
   </div>`;
 }
-function renderConnHome(app){ setBB('home'); const T=DATA.title; const fp=DATA.fullplan;
-  let labels=DATA.sections.map(s=>`<button class="lbl" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#sec--${s.id}')">${esc(s.label)}</button>`).join('');
-  app.innerHTML = header({label:'Level 4',fn:"go('#lvl--4')"}, '4TH LEVEL – FLOOR TRUSS CONNECTIONS', T.job+' · '+T.company, '#d99a00') + `
+/* ---------- UPDATE 26 TEST: Connections / Shearblocks overall = same screen as Trusses overall (trAll) ---------- */
+const OV_ORDER=['3A','3B','3C','4A','4B','4C','4D','5AB'];
+function ovName(s){ return s.id==='5AB'?'Bldg 5':s.label; }
+function ovGo(mode,level,id){ return mode==='sw'?`go('#swsec--${level}--${id}')`:`go('#sec--${id}')`; }
+function ovAll(app,mode,level){ const sw=(mode==='sw'); if(sw) level=SWDATA.sw_levels.some(l=>l.id===level)?level:DEFAULT_SW_LEVEL;
+  const ready=x=> sw?!!((SWDATA.sw_imgs[level]||{})[x.id]):!!SEC[x.id];
+  const labels=DATA.sections.map(x=>{ const ok=ready(x); return `<button class="lbl${ok?'':' pendl'}" style="left:${x.cx}%;top:${x.cy}%;border-color:${rgb(x.color)}" onclick="event.stopPropagation();${ovGo(mode,level,x.id)}">${esc(ovName(x))}${ok?'':' <span class="hg">⏳</span>'}</button>`; }).join('');
+  const grid=OV_ORDER.map(id=>DATA.sections.find(x=>x.id===id)).filter(Boolean).map(x=>{ const ok=ready(x); return `<button class="mini ${ok?'ok':'pend'}" onclick="${ovGo(mode,level,x.id)}" aria-label="${esc(ovName(x))} ${ok?'ready':'pending'}"><span class="n">${esc(ovName(x))}</span><span class="st">${ok?'✔':'<span class="hg">⏳</span>'}</span></button>`; }).join('');
+  const cap= sw ? `<div class="ovcap">Shear blocks locations<span>Bloqueo de corte · ${esc(SWDATA.sw_levels.find(l=>l.id===level).label)}</span></div>` : `<div class="ovcap">Truss connections<span>Conexiones de trusses · 4th Level</span></div>`;
+  const tabs= sw ? `<div class="ovtabs">${SWDATA.sw_levels.map(l=>`<button class="tab ${l.id===level?'on':''}" onclick="go('#swall--${l.id}')">${esc(l.short)}</button>`).join('')}</div>` : '';
+  const extra= sw ? '' : `<div class="card"><button class="btn sec" onclick="go('#all')">📋 All connection details (${DATA.details.length} sheets) · Todos los detalles</button></div>`;
+  const notes=`<div class="card"><details class="notes"><summary>Notes from the plan · Notas del plano</summary><ol>${DATA.notes.map(n=>`<li>${esc(n.en)}<span class="es">${esc(n.es)}</span></li>`).join('')}</ol></details></div>`;
+  const foot= sw ? `Built from "${esc(SWDATA.sw_levels.find(l=>l.id===level).source_pdf)}".` : 'Built from "4th Level - Floor Truss Connections - AMLI West.pdf" (111 pages, 30/10/26). National Framing · 2026-11-02.';
+  app.innerHTML=header({label:'Home',fn:"go('#home')"},'','',trStripe())+`
   <div class="wrap">
-    <div class="card title-card"><img src="header-logo.png" alt="National Framing Inc" style="height:46px;width:auto;border-radius:8px;margin-bottom:10px;display:block"><div class="big">4th Level – Floor Truss Connections</div><div class="sub">${esc(T.job)} · West Building · Buildings #3, #4 and #5</div><div class="meta">${esc(T.company)} · Rev 1 · ${esc(T.date)} · Created by ${esc(T.author)} · Phone version v1 (2026-11-02)</div></div>
-    <div class="card"><h2>Full plan – 4th level <small>Plano completo – nivel 4. Tap a section / Toca una sección.</small></h2>
-      <div class="plan" id="plan" onclick="planTap(event)"><img id="planimg" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div>
-      <div class="legend">${DATA.sections.map(s=>`<span class="pill" onclick="go('#sec--${s.id}')"><span class="dot" style="background:${rgb(s.color)}"></span>${esc(s.label)}</span>`).join('')}</div>
-      <div class="hint">Each colour = one section sheet (8 sheets). The connection colours inside each sheet are the ones from the plan. / Cada color = una hoja de sección (8 hojas). Los colores de las conexiones dentro de cada hoja son los del plano.</div>
-    </div>
-    <div class="card" id="secs"><h2>Sections <small>Secciones – buttons / botones</small></h2>
-      <div class="grid">${DATA.sections.map(s=>`<button class="sbtn" onclick="go('#sec--${s.id}')"><span class="sw" style="background:${rgb(s.color)}"></span><span><div class="n">${esc(s.label)}</div><div class="b">${esc(s.bldg)}</div><div class="b">${s.ntypes} connection types · ${s.ncallouts} callouts</div></span></button>`).join('')}</div>
-    </div>
-    <div class="card"><h2>All connection details <small>Todos los detalles de conexión (${DATA.details.length} sheets)</small></h2>
-      <button class="btn" onclick="go('#all')">Open the full list → · Abrir la lista completa</button>
-    </div>
-    <div class="card"><h2>Shearblocks <small>Bloqueo de corte — paredes con problema de plomería · 4th/5th/6th level</small></h2>
-      <button class="btn" onclick="go('#swall--4th')">Open · Abrir</button>
-      <div class="hint">Shear blocking marked in red = can be left out for plumbing (max 20% on W1/W3/W5 walls). Now covers 4th, 5th and 6th level. From the "Shear Blocking Interference" sheets (Jorge Lugo, Rev2). / Shear blocking marcado en rojo = se puede dejar fuera para la plomería (máximo 20% en muros W1/W3/W5). Ahora incluye 4to, 5to y 6to nivel. De las hojas "Shear Blocking Interference" (Jorge Lugo, Rev2).</div>
-    </div>
-    <div class="card"><details class="notes"><div class="card"><details class="notes"><summary>Notes from the plan · Notas del plano</summary><ol>${DATA.notes.map(n=>`<li>${esc(n.en)}<span class="es">${esc(n.es)}</span></li>`).join('')}</ol></details></div>
-    <div class="foot">Built from "4th Level - Floor Truss Connections - AMLI West.pdf" (111 pages, 30/10/26). National Framing · 2026-11-02.</div>
+    <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE ${NF_UPDATE.n} · ${NF_UPDATE.date}</button>
+    ${cap}${tabs}
+    <div class="plan big" id="planOV" onclick="planTapOV(event,'${mode}','${level||''}')"><img id="planimgOV" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div>
+    <div class="minigrid">${grid}</div>
+    ${extra}${notes}
+    <div class="foot">${foot}</div>
   </div>`;
-}
+  const hd=app.querySelector('.hdr'); if(hd){ hd.classList.add('notitle'); const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); }
+  const bb=document.getElementById('bottombar'); if(bb) bb.style.display='none';
+  nfCheck(); }
+function planTapOV(ev,mode,level){ const img=document.getElementById('planimgOV'); const r=img.getBoundingClientRect();
+  const x=(ev.clientX-r.left)/r.width, y=(ev.clientY-r.top)/r.height; if(x<0||y<0||x>1||y>1) return;
+  const done=(c)=>{ const W=c.width,H=c.height; const px=c.getContext('2d').getImageData(Math.floor(x*W),Math.floor(y*H),1,1).data[0]; let k=0;
+    if(px>0 && DATA.sections[px-1]) k=px; else { const d=c.getContext('2d').getImageData(Math.max(0,Math.floor(x*W)-12),Math.max(0,Math.floor(y*H)-12),24,24).data; const cnt={}; for(let i=0;i<d.length;i+=4){ if(d[i]>0) cnt[d[i]]=(cnt[d[i]]||0)+1; } let bn=0; for(const q in cnt){ if(cnt[q]>bn){bn=cnt[q];k=+q;} } }
+    if(k>0 && DATA.sections[k-1]) go(mode==='sw'?'#swsec--'+level+'--'+DATA.sections[k-1].id:'#sec--'+DATA.sections[k-1].id); };
+  if(idxCanvas){ done(idxCanvas); return; }
+  const im=new Image(); im.onload=()=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); idxCanvas=c; done(c); }; im.src=imgSrc('fullplan_index'); }
+function renderConnHome(app){ setBB('home'); ovAll(app,'conn'); }
+
 /* ---- UPDATE 7 TEST v3: Home = level buttons (3-7) -> file types of that level ---- */
 const NF_LEVELS=[
   {n:3, tr:null,  conn:false, sw:null},
   {n:4, tr:'4',    conn:true,  sw:'4th'},
   {n:5, tr:'567',  conn:false, sw:'5th'},
   {n:6, tr:'567',  conn:false, sw:'6th'},
-  {n:7, tr:'567',  conn:false, sw:null}];
+  {n:7, tr:'567',  conn:false, sw:null},
+  {n:8, tr:'R',    conn:false, sw:null}];
 function nfLvlTypes(L){ const a=[]; if(L.tr) a.push('Truss layout'); if(L.conn) a.push('Connections'); if(L.sw) a.push('Shear blocks'); return a; }
 function renderHome(app){ setBB(''); const T=DATA.title;
   const ORD={4:'4th',5:'5th',6:'6th',7:'7th'};
   const fl=n=>{ const L=NF_LEVELS.find(x=>x.n===n); const av=nfLvlTypes(L);
     return `<button class="fbtn" style="grid-column:1;grid-row:${n-3}" onclick="go('${L&&L.tr?'#trall--'+L.tr+'--'+n:'#lvl--'+n}')"><b>${ORD[n]} Floor</b></button>`; };
-  const roofY=()=>`<button class="fbtn" style="grid-column:1;grid-row:5" disabled><b>Roof trusses</b><small>Not loaded yet</small></button>`;
+  const roofY=()=>`<button class="fbtn" id="roofbtn" style="grid-column:1;grid-row:5" disabled><b>Roof trusses</b><small>Not loaded yet</small></button>`;
   const FLOOR_SVG='<svg viewBox="0 0 120 28" aria-hidden="true" focusable="false"><g fill="none" stroke="#374151" stroke-linejoin="round" stroke-linecap="round"><path stroke-width="2.6" d="M3 4H117M3 24H117"/><path stroke-width="1.6" d="M3 4V24M117 4V24"/><path stroke-width="1.6" d="M3 24L14.6 4L26.2 24L37.8 4L49.4 24L61 4L72.6 24L84.2 4L95.8 24L107.4 4L117 24"/></g></svg>';
   const ROOF_SVG='<svg viewBox="0 0 120 28" aria-hidden="true" focusable="false"><g fill="none" stroke="#374151" stroke-linejoin="round" stroke-linecap="round"><path stroke-width="2.6" d="M6 25L60 3L114 25Z"/><path stroke-width="1.6" d="M60 3L42 25M60 3L78 25M42 25L33 14M78 25L87 14"/></g></svg>';
   const prof=(en,svg,row)=>`<button class="fbtn off prof" style="grid-column:2;grid-row:${row}" disabled><b>${en}</b>${svg}</button>`;
@@ -609,10 +622,11 @@ function renderHome(app){ setBB(''); const T=DATA.title;
   <div class="wrap">
     <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE ${NF_UPDATE.n} · ${NF_UPDATE.date}</button>
     <div class="fgrid" style="grid-template-columns:1fr">${fl(4)}${fl(5)}${fl(6)}${fl(7)}${roofY()}</div>
-    <div class="foot qrfoot"><svg viewBox="0 0 41 41" shape-rendering="crispEdges" role="img" aria-label="QR code to share this app"><rect width="100%" height="100%" fill="#fff"/><path fill="#111" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM12 4h1v1h-1zM13 4h1v1h-1zM14 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM27 4h1v1h-1zM30 4h1v1h-1zM31 4h1v1h-1zM32 4h1v1h-1zM33 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM13 5h1v1h-1zM15 5h1v1h-1zM17 5h1v1h-1zM24 5h1v1h-1zM27 5h1v1h-1zM28 5h1v1h-1zM30 5h1v1h-1zM36 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM13 6h1v1h-1zM14 6h1v1h-1zM19 6h1v1h-1zM23 6h1v1h-1zM28 6h1v1h-1zM30 6h1v1h-1zM32 6h1v1h-1zM33 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM12 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM20 7h1v1h-1zM21 7h1v1h-1zM23 7h1v1h-1zM24 7h1v1h-1zM27 7h1v1h-1zM28 7h1v1h-1zM30 7h1v1h-1zM32 7h1v1h-1zM33 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM17 8h1v1h-1zM18 8h1v1h-1zM21 8h1v1h-1zM22 8h1v1h-1zM23 8h1v1h-1zM25 8h1v1h-1zM28 8h1v1h-1zM30 8h1v1h-1zM32 8h1v1h-1zM33 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM13 9h1v1h-1zM15 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM22 9h1v1h-1zM23 9h1v1h-1zM26 9h1v1h-1zM30 9h1v1h-1zM36 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM31 10h1v1h-1zM32 10h1v1h-1zM33 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM12 11h1v1h-1zM13 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM26 11h1v1h-1zM27 11h1v1h-1zM28 11h1v1h-1zM4 12h1v1h-1zM6 12h1v1h-1zM7 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM11 12h1v1h-1zM13 12h1v1h-1zM14 12h1v1h-1zM16 12h1v1h-1zM18 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM25 12h1v1h-1zM27 12h1v1h-1zM30 12h1v1h-1zM33 12h1v1h-1zM35 12h1v1h-1zM36 12h1v1h-1zM4 13h1v1h-1zM6 13h1v1h-1zM7 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM20 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM24 13h1v1h-1zM27 13h1v1h-1zM30 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM34 13h1v1h-1zM36 13h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM8 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM16 14h1v1h-1zM18 14h1v1h-1zM21 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM26 14h1v1h-1zM27 14h1v1h-1zM28 14h1v1h-1zM30 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM33 14h1v1h-1zM35 14h1v1h-1zM36 14h1v1h-1zM4 15h1v1h-1zM6 15h1v1h-1zM7 15h1v1h-1zM12 15h1v1h-1zM16 15h1v1h-1zM17 15h1v1h-1zM18 15h1v1h-1zM19 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM30 15h1v1h-1zM31 15h1v1h-1zM33 15h1v1h-1zM36 15h1v1h-1zM4 16h1v1h-1zM6 16h1v1h-1zM7 16h1v1h-1zM8 16h1v1h-1zM10 16h1v1h-1zM13 16h1v1h-1zM21 16h1v1h-1zM24 16h1v1h-1zM26 16h1v1h-1zM28 16h1v1h-1zM29 16h1v1h-1zM32 16h1v1h-1zM33 16h1v1h-1zM35 16h1v1h-1zM36 16h1v1h-1zM4 17h1v1h-1zM5 17h1v1h-1zM6 17h1v1h-1zM12 17h1v1h-1zM15 17h1v1h-1zM17 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM23 17h1v1h-1zM25 17h1v1h-1zM26 17h1v1h-1zM28 17h1v1h-1zM29 17h1v1h-1zM31 17h1v1h-1zM34 17h1v1h-1zM35 17h1v1h-1zM4 18h1v1h-1zM8 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM14 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM20 18h1v1h-1zM21 18h1v1h-1zM23 18h1v1h-1zM24 18h1v1h-1zM25 18h1v1h-1zM28 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM32 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM5 19h1v1h-1zM6 19h1v1h-1zM7 19h1v1h-1zM9 19h1v1h-1zM13 19h1v1h-1zM14 19h1v1h-1zM18 19h1v1h-1zM20 19h1v1h-1zM22 19h1v1h-1zM24 19h1v1h-1zM25 19h1v1h-1zM29 19h1v1h-1zM30 19h1v1h-1zM33 19h1v1h-1zM34 19h1v1h-1zM6 20h1v1h-1zM7 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM12 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM19 20h1v1h-1zM23 20h1v1h-1zM25 20h1v1h-1zM26 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM32 20h1v1h-1zM34 20h1v1h-1zM4 21h1v1h-1zM5 21h1v1h-1zM6 21h1v1h-1zM7 21h1v1h-1zM8 21h1v1h-1zM12 21h1v1h-1zM13 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM17 21h1v1h-1zM19 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM29 21h1v1h-1zM30 21h1v1h-1zM32 21h1v1h-1zM33 21h1v1h-1zM35 21h1v1h-1zM36 21h1v1h-1zM8 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM14 22h1v1h-1zM16 22h1v1h-1zM18 22h1v1h-1zM19 22h1v1h-1zM20 22h1v1h-1zM24 22h1v1h-1zM26 22h1v1h-1zM28 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM34 22h1v1h-1zM35 22h1v1h-1zM4 23h1v1h-1zM8 23h1v1h-1zM9 23h1v1h-1zM12 23h1v1h-1zM15 23h1v1h-1zM17 23h1v1h-1zM18 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM21 23h1v1h-1zM22 23h1v1h-1zM24 23h1v1h-1zM26 23h1v1h-1zM29 23h1v1h-1zM32 23h1v1h-1zM36 23h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM7 24h1v1h-1zM10 24h1v1h-1zM11 24h1v1h-1zM13 24h1v1h-1zM14 24h1v1h-1zM15 24h1v1h-1zM16 24h1v1h-1zM18 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM25 24h1v1h-1zM29 24h1v1h-1zM31 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM4 25h1v1h-1zM9 25h1v1h-1zM11 25h1v1h-1zM12 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM23 25h1v1h-1zM25 25h1v1h-1zM27 25h1v1h-1zM30 25h1v1h-1zM34 25h1v1h-1zM36 25h1v1h-1zM7 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM14 26h1v1h-1zM15 26h1v1h-1zM16 26h1v1h-1zM18 26h1v1h-1zM20 26h1v1h-1zM22 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM27 26h1v1h-1zM28 26h1v1h-1zM29 26h1v1h-1zM32 26h1v1h-1zM33 26h1v1h-1zM34 26h1v1h-1zM35 26h1v1h-1zM36 26h1v1h-1zM5 27h1v1h-1zM6 27h1v1h-1zM11 27h1v1h-1zM12 27h1v1h-1zM13 27h1v1h-1zM14 27h1v1h-1zM18 27h1v1h-1zM19 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM29 27h1v1h-1zM30 27h1v1h-1zM32 27h1v1h-1zM33 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM4 28h1v1h-1zM6 28h1v1h-1zM9 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM12 28h1v1h-1zM14 28h1v1h-1zM17 28h1v1h-1zM18 28h1v1h-1zM21 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM30 28h1v1h-1zM31 28h1v1h-1zM32 28h1v1h-1zM33 28h1v1h-1zM36 28h1v1h-1zM12 29h1v1h-1zM17 29h1v1h-1zM19 29h1v1h-1zM21 29h1v1h-1zM23 29h1v1h-1zM28 29h1v1h-1zM32 29h1v1h-1zM33 29h1v1h-1zM4 30h1v1h-1zM5 30h1v1h-1zM6 30h1v1h-1zM7 30h1v1h-1zM8 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM12 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM21 30h1v1h-1zM23 30h1v1h-1zM24 30h1v1h-1zM27 30h1v1h-1zM28 30h1v1h-1zM30 30h1v1h-1zM32 30h1v1h-1zM4 31h1v1h-1zM10 31h1v1h-1zM12 31h1v1h-1zM14 31h1v1h-1zM15 31h1v1h-1zM17 31h1v1h-1zM20 31h1v1h-1zM23 31h1v1h-1zM24 31h1v1h-1zM25 31h1v1h-1zM26 31h1v1h-1zM27 31h1v1h-1zM28 31h1v1h-1zM32 31h1v1h-1zM33 31h1v1h-1zM34 31h1v1h-1zM36 31h1v1h-1zM4 32h1v1h-1zM6 32h1v1h-1zM7 32h1v1h-1zM8 32h1v1h-1zM10 32h1v1h-1zM13 32h1v1h-1zM16 32h1v1h-1zM19 32h1v1h-1zM22 32h1v1h-1zM25 32h1v1h-1zM26 32h1v1h-1zM27 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM4 33h1v1h-1zM6 33h1v1h-1zM7 33h1v1h-1zM8 33h1v1h-1zM10 33h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM14 33h1v1h-1zM17 33h1v1h-1zM19 33h1v1h-1zM20 33h1v1h-1zM21 33h1v1h-1zM22 33h1v1h-1zM24 33h1v1h-1zM25 33h1v1h-1zM28 33h1v1h-1zM31 33h1v1h-1zM33 33h1v1h-1zM36 33h1v1h-1zM4 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM10 34h1v1h-1zM12 34h1v1h-1zM13 34h1v1h-1zM14 34h1v1h-1zM15 34h1v1h-1zM18 34h1v1h-1zM19 34h1v1h-1zM22 34h1v1h-1zM24 34h1v1h-1zM26 34h1v1h-1zM27 34h1v1h-1zM28 34h1v1h-1zM30 34h1v1h-1zM31 34h1v1h-1zM34 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM14 35h1v1h-1zM15 35h1v1h-1zM18 35h1v1h-1zM20 35h1v1h-1zM21 35h1v1h-1zM22 35h1v1h-1zM23 35h1v1h-1zM24 35h1v1h-1zM27 35h1v1h-1zM28 35h1v1h-1zM29 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM4 36h1v1h-1zM5 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM9 36h1v1h-1zM10 36h1v1h-1zM12 36h1v1h-1zM13 36h1v1h-1zM14 36h1v1h-1zM15 36h1v1h-1zM17 36h1v1h-1zM18 36h1v1h-1zM20 36h1v1h-1zM21 36h1v1h-1zM22 36h1v1h-1zM23 36h1v1h-1zM25 36h1v1h-1zM27 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1z"/></svg><div><b>Scan to share this app</b>National Framing · AMLI West</div></div>
+    <div class="foot qrfoot"><svg viewBox="0 0 41 41" shape-rendering="crispEdges" role="img" aria-label="QR code to share this app"><rect width="100%" height="100%" fill="#fff"/><path fill="#111" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM12 4h1v1h-1zM13 4h1v1h-1zM16 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM27 4h1v1h-1zM30 4h1v1h-1zM31 4h1v1h-1zM32 4h1v1h-1zM33 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM13 5h1v1h-1zM14 5h1v1h-1zM16 5h1v1h-1zM18 5h1v1h-1zM21 5h1v1h-1zM24 5h1v1h-1zM27 5h1v1h-1zM28 5h1v1h-1zM30 5h1v1h-1zM36 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM13 6h1v1h-1zM14 6h1v1h-1zM17 6h1v1h-1zM18 6h1v1h-1zM19 6h1v1h-1zM22 6h1v1h-1zM23 6h1v1h-1zM28 6h1v1h-1zM30 6h1v1h-1zM32 6h1v1h-1zM33 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM12 7h1v1h-1zM15 7h1v1h-1zM16 7h1v1h-1zM19 7h1v1h-1zM22 7h1v1h-1zM23 7h1v1h-1zM27 7h1v1h-1zM28 7h1v1h-1zM30 7h1v1h-1zM32 7h1v1h-1zM33 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM13 8h1v1h-1zM14 8h1v1h-1zM15 8h1v1h-1zM17 8h1v1h-1zM20 8h1v1h-1zM21 8h1v1h-1zM22 8h1v1h-1zM25 8h1v1h-1zM28 8h1v1h-1zM30 8h1v1h-1zM32 8h1v1h-1zM33 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM13 9h1v1h-1zM15 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM22 9h1v1h-1zM26 9h1v1h-1zM30 9h1v1h-1zM36 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM31 10h1v1h-1zM32 10h1v1h-1zM33 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM12 11h1v1h-1zM13 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM26 11h1v1h-1zM27 11h1v1h-1zM28 11h1v1h-1zM4 12h1v1h-1zM6 12h1v1h-1zM7 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM11 12h1v1h-1zM13 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM18 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM22 12h1v1h-1zM25 12h1v1h-1zM27 12h1v1h-1zM30 12h1v1h-1zM33 12h1v1h-1zM35 12h1v1h-1zM36 12h1v1h-1zM4 13h1v1h-1zM6 13h1v1h-1zM7 13h1v1h-1zM8 13h1v1h-1zM9 13h1v1h-1zM11 13h1v1h-1zM13 13h1v1h-1zM17 13h1v1h-1zM20 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM24 13h1v1h-1zM27 13h1v1h-1zM30 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM34 13h1v1h-1zM36 13h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM8 14h1v1h-1zM10 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM26 14h1v1h-1zM27 14h1v1h-1zM28 14h1v1h-1zM30 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM33 14h1v1h-1zM35 14h1v1h-1zM36 14h1v1h-1zM7 15h1v1h-1zM8 15h1v1h-1zM11 15h1v1h-1zM14 15h1v1h-1zM15 15h1v1h-1zM16 15h1v1h-1zM19 15h1v1h-1zM21 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM30 15h1v1h-1zM31 15h1v1h-1zM33 15h1v1h-1zM36 15h1v1h-1zM4 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM14 16h1v1h-1zM18 16h1v1h-1zM20 16h1v1h-1zM26 16h1v1h-1zM28 16h1v1h-1zM29 16h1v1h-1zM32 16h1v1h-1zM33 16h1v1h-1zM35 16h1v1h-1zM36 16h1v1h-1zM11 17h1v1h-1zM13 17h1v1h-1zM18 17h1v1h-1zM21 17h1v1h-1zM24 17h1v1h-1zM25 17h1v1h-1zM26 17h1v1h-1zM28 17h1v1h-1zM29 17h1v1h-1zM31 17h1v1h-1zM34 17h1v1h-1zM35 17h1v1h-1zM4 18h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM7 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM14 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM21 18h1v1h-1zM23 18h1v1h-1zM24 18h1v1h-1zM25 18h1v1h-1zM28 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM32 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM15 19h1v1h-1zM17 19h1v1h-1zM19 19h1v1h-1zM22 19h1v1h-1zM23 19h1v1h-1zM24 19h1v1h-1zM25 19h1v1h-1zM29 19h1v1h-1zM30 19h1v1h-1zM33 19h1v1h-1zM34 19h1v1h-1zM4 20h1v1h-1zM6 20h1v1h-1zM7 20h1v1h-1zM10 20h1v1h-1zM11 20h1v1h-1zM13 20h1v1h-1zM14 20h1v1h-1zM17 20h1v1h-1zM18 20h1v1h-1zM23 20h1v1h-1zM25 20h1v1h-1zM26 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM32 20h1v1h-1zM34 20h1v1h-1zM8 21h1v1h-1zM14 21h1v1h-1zM16 21h1v1h-1zM19 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM29 21h1v1h-1zM30 21h1v1h-1zM32 21h1v1h-1zM33 21h1v1h-1zM35 21h1v1h-1zM36 21h1v1h-1zM4 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM13 22h1v1h-1zM14 22h1v1h-1zM19 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM26 22h1v1h-1zM28 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM34 22h1v1h-1zM35 22h1v1h-1zM4 23h1v1h-1zM7 23h1v1h-1zM8 23h1v1h-1zM12 23h1v1h-1zM16 23h1v1h-1zM17 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM21 23h1v1h-1zM22 23h1v1h-1zM24 23h1v1h-1zM26 23h1v1h-1zM29 23h1v1h-1zM32 23h1v1h-1zM36 23h1v1h-1zM5 24h1v1h-1zM7 24h1v1h-1zM8 24h1v1h-1zM10 24h1v1h-1zM13 24h1v1h-1zM14 24h1v1h-1zM16 24h1v1h-1zM17 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM25 24h1v1h-1zM29 24h1v1h-1zM31 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM4 25h1v1h-1zM6 25h1v1h-1zM7 25h1v1h-1zM8 25h1v1h-1zM14 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM20 25h1v1h-1zM21 25h1v1h-1zM23 25h1v1h-1zM25 25h1v1h-1zM27 25h1v1h-1zM30 25h1v1h-1zM34 25h1v1h-1zM36 25h1v1h-1zM7 26h1v1h-1zM9 26h1v1h-1zM10 26h1v1h-1zM13 26h1v1h-1zM16 26h1v1h-1zM19 26h1v1h-1zM22 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM27 26h1v1h-1zM28 26h1v1h-1zM29 26h1v1h-1zM32 26h1v1h-1zM33 26h1v1h-1zM34 26h1v1h-1zM35 26h1v1h-1zM36 26h1v1h-1zM5 27h1v1h-1zM8 27h1v1h-1zM9 27h1v1h-1zM11 27h1v1h-1zM12 27h1v1h-1zM13 27h1v1h-1zM14 27h1v1h-1zM15 27h1v1h-1zM18 27h1v1h-1zM19 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM29 27h1v1h-1zM30 27h1v1h-1zM32 27h1v1h-1zM33 27h1v1h-1zM36 27h1v1h-1zM4 28h1v1h-1zM7 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM12 28h1v1h-1zM14 28h1v1h-1zM16 28h1v1h-1zM17 28h1v1h-1zM18 28h1v1h-1zM21 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM30 28h1v1h-1zM31 28h1v1h-1zM32 28h1v1h-1zM33 28h1v1h-1zM12 29h1v1h-1zM13 29h1v1h-1zM14 29h1v1h-1zM17 29h1v1h-1zM18 29h1v1h-1zM19 29h1v1h-1zM23 29h1v1h-1zM28 29h1v1h-1zM32 29h1v1h-1zM33 29h1v1h-1zM4 30h1v1h-1zM5 30h1v1h-1zM6 30h1v1h-1zM7 30h1v1h-1zM8 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM12 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM17 30h1v1h-1zM18 30h1v1h-1zM21 30h1v1h-1zM22 30h1v1h-1zM23 30h1v1h-1zM24 30h1v1h-1zM27 30h1v1h-1zM28 30h1v1h-1zM30 30h1v1h-1zM32 30h1v1h-1zM4 31h1v1h-1zM10 31h1v1h-1zM12 31h1v1h-1zM14 31h1v1h-1zM15 31h1v1h-1zM17 31h1v1h-1zM18 31h1v1h-1zM20 31h1v1h-1zM21 31h1v1h-1zM22 31h1v1h-1zM23 31h1v1h-1zM24 31h1v1h-1zM25 31h1v1h-1zM26 31h1v1h-1zM27 31h1v1h-1zM28 31h1v1h-1zM32 31h1v1h-1zM33 31h1v1h-1zM34 31h1v1h-1zM36 31h1v1h-1zM4 32h1v1h-1zM6 32h1v1h-1zM7 32h1v1h-1zM8 32h1v1h-1zM10 32h1v1h-1zM13 32h1v1h-1zM14 32h1v1h-1zM16 32h1v1h-1zM17 32h1v1h-1zM19 32h1v1h-1zM20 32h1v1h-1zM21 32h1v1h-1zM22 32h1v1h-1zM25 32h1v1h-1zM26 32h1v1h-1zM27 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM4 33h1v1h-1zM6 33h1v1h-1zM7 33h1v1h-1zM8 33h1v1h-1zM10 33h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM14 33h1v1h-1zM17 33h1v1h-1zM20 33h1v1h-1zM21 33h1v1h-1zM24 33h1v1h-1zM25 33h1v1h-1zM28 33h1v1h-1zM31 33h1v1h-1zM33 33h1v1h-1zM36 33h1v1h-1zM4 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM10 34h1v1h-1zM12 34h1v1h-1zM17 34h1v1h-1zM18 34h1v1h-1zM19 34h1v1h-1zM20 34h1v1h-1zM22 34h1v1h-1zM24 34h1v1h-1zM26 34h1v1h-1zM27 34h1v1h-1zM28 34h1v1h-1zM30 34h1v1h-1zM31 34h1v1h-1zM34 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM14 35h1v1h-1zM15 35h1v1h-1zM16 35h1v1h-1zM17 35h1v1h-1zM18 35h1v1h-1zM21 35h1v1h-1zM22 35h1v1h-1zM23 35h1v1h-1zM24 35h1v1h-1zM27 35h1v1h-1zM28 35h1v1h-1zM29 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM4 36h1v1h-1zM5 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM9 36h1v1h-1zM10 36h1v1h-1zM12 36h1v1h-1zM14 36h1v1h-1zM15 36h1v1h-1zM17 36h1v1h-1zM18 36h1v1h-1zM20 36h1v1h-1zM21 36h1v1h-1zM22 36h1v1h-1zM23 36h1v1h-1zM25 36h1v1h-1zM27 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1z"/></svg><div><b>Scan to share this app</b>National Framing · AMLI West</div></div>
   </div>`;
   const hd=app.querySelector('.hdr'); if(hd){ hd.classList.add('homehdr'); const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); hd.insertAdjacentHTML('afterbegin','<div class="p2back"><button class="back" onclick="go(\'#start\')">◀ Projects</button></div>'); }
   nfCheck(); nfNumber();
+  trLoad().then(()=>{ const b=document.getElementById('roofbtn'); if(b && trRoofReady()){ b.disabled=false; b.setAttribute('onclick',"go('#trall--R--8')"); const sm=b.querySelector('small'); if(sm) sm.remove(); } }).catch(()=>{});
 }
 /* Home element numbers (Jorge: "numerar los botones y elementos") - dark badge, top-left of each element */
 const NF_NUMS=[['.trtest',1],['#app .hdr .row',2],['#app .hdr .upd',3],['#nfstbox',4],['#nfstat',5],
@@ -623,7 +637,7 @@ const NF_NUMS_P1=[['.trtest',1],['#startlogo',2],['#p-amli',3],['#p-c1',4],['#p-
 const NF_NUMS_P3=[['.trtest',1],['#app .hdr .row',2],['#nfstat',3],['#app .wrap > div.card:first-of-type h2',4],
   ['#app .wrap > div.card:first-of-type .sbtn:nth-of-type(1)',5],['#app .wrap > div.card:first-of-type .sbtn:nth-of-type(2)',6],['#app .wrap > div.card:first-of-type .sbtn:nth-of-type(3)',7],['#app .wrap > div.card:first-of-type .sbtn:nth-of-type(4)',8],['#app .wrap > div.card:first-of-type .sbtn:nth-of-type(5)',9],
   ['#flsave',10],['#app .foot',11],['#nfhint',12]];
-function nfNumber(){ const v=parseRoute().view; document.body.setAttribute('data-page',v); (v==='start'?NF_NUMS_P1:(v==='lvl'?NF_NUMS_P3:NF_NUMS)).forEach(([q,n])=>{ const e=document.querySelector(q); if(e) e.setAttribute('data-n',n); }); }
+function nfNumber(){ return; const v=parseRoute().view; document.body.setAttribute('data-page',v); (v==='start'?NF_NUMS_P1:(v==='lvl'?NF_NUMS_P3:NF_NUMS)).forEach(([q,n])=>{ const e=document.querySelector(q); if(e) e.setAttribute('data-n',n); }); }
 /* Update status box (Jorge's sketch): green = latest version, yellow = new version found / updating, red = no signal (cannot check), grey = checking or not saved yet */
 const NF_ST={
   g:'Up to date',
@@ -733,12 +747,16 @@ function renderSection(app, s, qs){ setBB('secs');
     <div class="card"><h2>Section sheet <small>Hoja de la sección – pinch to zoom, drag to move, double-tap to zoom, tap a CONNECTION label to open its detail / pellizca para acercar, arrastra para mover, doble toque para acercar, toca una etiqueta CONNECTION para abrir su detalle</small></h2>
       <div class="viewer" id="v-sec"></div></div>
     <div class="card"><h2>Connections in this section <small>Conexiones en esta sección – ${items.length} types / tipos · ${s.ncallouts} callouts marked / marcas</small></h2>
-      <input class="srch" id="srch" placeholder="Filter by number, e.g. 12 or 5.B / Filtrar por número" oninput="filterList(this.value)">
-      <div id="list">${items.map(d=>connCard(d, s.id, s.counts[d.id])).join('')}</div>
+      <input class="srch" id="srch" placeholder="Number, e.g. 1.1 or 5.B / Número" oninput="secFind('${s.id}')" autocomplete="off" autocapitalize="characters">
+      <div id="list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
     </div>
   </div>`;
-  makeViewer(document.getElementById('v-sec'), s.img, {taps: s.taps});
+  window._secItems=items;
+  makeViewer(document.getElementById('v-sec'), s.img, {taps: s.taps, noctl:true});
 }
+function secFind(sid){ const q=(document.getElementById('srch').value||'').trim().toUpperCase().replace('#',''), box=document.getElementById('list'), s=SEC[sid];
+  if(!q){ box.innerHTML=''; return; }
+  box.innerHTML=(window._secItems||[]).filter(d=>String(d.label).toUpperCase().indexOf(q)>=0).map(d=>`<span class="pill" onclick="go('#det--${encId(d.id)}--${sid}')"><span class="dot" style="background:${d.color?rgb(d.color):'#999'}"></span>${esc(d.label)}${d.variant?' ('+esc(d.variant)+')':''} ×${s.counts[d.id]}</span>`).join('')||'<span class="empty">No match</span>'; }
 function filterList(q){ q=q.trim().toUpperCase().replace('#',''); document.querySelectorAll('#list .conn').forEach(c=>{ const id=c.querySelector('.id').textContent.toUpperCase(); c.style.display=(!q||id.includes(q))?'':'none'; }); }
 
 function renderDetail(app, d, qs){ setBB('all');
@@ -766,7 +784,7 @@ function renderDetail(app, d, qs){ setBB('all');
   </div>`;
   window._detImgs=d.imgs; detTab(0);
 }
-function detTab(k){ document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('on',i===k)); makeViewer(document.getElementById('v-det'), window._detImgs[k]); }
+function detTab(k){ document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('on',i===k)); makeViewer(document.getElementById('v-det'), window._detImgs[k], {noctl:true}); }
 
 function renderAll(app, qs){ setBB('all');
   const fams=DATA.families;
@@ -800,9 +818,9 @@ function renderSWSection(app, s, level, qs){ level = SWDATA.sw_levels.some(l=>l.
   setBB('home');
   const items=(s.conns||[]).map(c=>Object.assign({}, DET_SW[c.id], {plan_variants_here:c.variants})).sort((a,b)=>cmpId(a.id,b.id));
   const imgs=info.imgs||[];
-  app.innerHTML = header({label:'Shearblocks',fn:`go('#swall--${level}')`}, `Shearblocks — Section ${esc(s.label)}`, `${esc(s.bldg)} · ${esc(LVL.label)} · Sheet ${esc(info.page)} of ${LVL.pages}`, rgb(s.color)) + `
+  app.innerHTML = header({label:'Plan',fn:`go('#swall--${level}')`}, `Shear blocks — ${esc(s.label)}`, `${esc(s.bldg)} · ${esc(LVL.label)}`, rgb(s.color)) + `
   <div class="wrap">
-    <div class="card"><h2>Shear blocking sheet <small>Hoja de shear blocking – red = can be left out for plumbing (max 20%) · pinch to zoom / rojo = se puede dejar fuera para la plomería (máx. 20%) · pellizca para acercar</small></h2>
+    <div class="card"><h2>Shear blocking sheet <small>Sheet ${esc(info.page)} of ${LVL.pages} · Hoja de shear blocking – red = can be left out for plumbing (max 20%) · pinch to zoom / rojo = se puede dejar fuera para la plomería (máx. 20%) · pellizca para acercar</small></h2>
       ${imgs.length>1?`<div class="tabs">${imgs.map((im,k)=>`<button class="tab ${k===0?'on':''}" onclick="detTabSWSec(${k})">${esc(im.label)}</button>`).join('')}</div>`:''}
       <div class="viewer" id="v-sec"></div></div>
     ${items.length?`<div class="card"><h2>Blocks in this section <small>Cuadros en esta sección – ${items.length} types / tipos</small></h2>
@@ -811,7 +829,7 @@ function renderSWSection(app, s, level, qs){ level = SWDATA.sw_levels.some(l=>l.
   </div>`;
   window._swSecImgs = imgs.map(im=>im.img); detTabSWSec(0);
 }
-function detTabSWSec(k){ document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('on',i===k)); makeViewer(document.getElementById('v-sec'), window._swSecImgs[k]); }
+function detTabSWSec(k){ document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('on',i===k)); makeViewer(document.getElementById('v-sec'), window._swSecImgs[k], {noctl:true}); }
 function renderSWDetail(app, d, level, qs){ level = SWDATA.sw_levels.some(l=>l.id===level)?level:DEFAULT_SW_LEVEL;
   setBB('home');
   const from=qs.from||'swall'; const back= SEC_SW[from]?{label:'Section '+SEC_SW[from].label, fn:`go('#swsec--${level}--${from}')`}:{label:'List', fn:`go('#swall--${level}')`};
@@ -836,23 +854,8 @@ function renderSWDetail(app, d, level, qs){ level = SWDATA.sw_levels.some(l=>l.i
   </div>`;
   window._swDetImgs=d.imgs; detTabSW(0);
 }
-function detTabSW(k){ document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('on',i===k)); makeViewer(document.getElementById('v-det'), window._swDetImgs[k]); }
-function renderSWAll(app, level, qs){ level = SWDATA.sw_levels.some(l=>l.id===level)?level:DEFAULT_SW_LEVEL; setBB('home');
-  const LVL=SWDATA.sw_levels.find(l=>l.id===level);
-  let labels=SWDATA.sw_sections.map(s=>`<button class="lbl" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#swsec--${level}--${s.id}')">${esc(s.label)}</button>`).join('');
-  let lvltabs=SWDATA.sw_levels.map(l=>`<button class="tab ${l.id===level?'on':''}" onclick="go('#swall--${l.id}')">${esc(l.short)}</button>`).join('');
-  app.innerHTML = header({label:'Level',fn:"go('#lvl--"+parseInt(level)+"')"}, 'SHEARBLOCKS', `Shear blocking interference — ${esc(LVL.label)}`, '#d99a00') + `
-  <div class="wrap">
-    <div class="card"><h2>Level <small>Nivel — tap to switch / toca para cambiar</small></h2><div class="tabs">${lvltabs}</div></div>
-    <div class="card"><h2>Overall plan — 8 sections <small>Plano completo – 8 secciones. Tap a section / Toca una sección.</small></h2>
-      <div class="plan" id="planSW" onclick="planTapSW(event,'${level}')"><img id="planimgSW" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div>
-      <div class="legend">${SWDATA.sw_sections.map(s=>`<span class="pill" onclick="go('#swsec--${level}--${s.id}')"><span class="dot" style="background:${rgb(s.color)}"></span>${esc(s.label)}</span>`).join('')}</div>
-      <div class="hint">Same 8 sections as the Floor Truss Connections plan. Tap one to see its shear-blocking sheet with the red marks. The "5A/5B" section shows 2 sheets on 5th/6th level. / Mismas 8 secciones que el plano de Floor Truss Connections. Toca una para ver su hoja de shear blocking con las marcas rojas. La sección "5A/5B" muestra 2 hojas en 5to/6to nivel.</div>
-    </div>
-    <div class="card"><details class="notes"><summary>Notes from the plan · Notas del plano</summary><ol>${SWDATA.notes.map(n=>`<li>${esc(n.en)}<span class="es">${esc(n.es)}</span></li>`).join('')}</ol></details></div>
-    <div class="foot">Built from "${esc(LVL.source_pdf)}".</div>
-  </div>`;
-}
+function detTabSW(k){ document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('on',i===k)); makeViewer(document.getElementById('v-det'), window._swDetImgs[k], {noctl:true}); }
+function renderSWAll(app, level, qs){ setBB('home'); ovAll(app,'sw',level); }
 /* ===== UPDATE 7 (TEST COPY): Trusses tab - Allied Truss layouts + sealed design pages (Procore Submittal #277) =====
    Test copy only. Layouts + mark positions are cached by the service worker (always offline, decision D1-B).
    Truss design pages are saved per section on demand ("Save this section offline") into the Cache API. */
@@ -869,15 +872,18 @@ function trLoad(){ if(TR) return Promise.resolve(TR);
     return d; }); }
 function trName(s){ return s.building==='5'?'Bldg 5':s.building+s.section; }
 function trSub(s){ return s.building==='5'?'Building #5':('Building #'+s.building+' · Section '+s.section); }
-function trGroup(s){ return s.level==='4'?'4':'567'; }
-function trGLabel(g){ return g==='4'?'Level 4':'Levels 5-6-7'; }
-function trLvlLbl(g){ return g==='4'?'Level 4':((NF_PLANLVL>=5&&NF_PLANLVL<=7)?'Level '+NF_PLANLVL:'Levels 5-6-7'); }
-function trId(dataId,g){ return (g==='4'?'L4-':'L567-')+(dataId==='5AB'?'B5':dataId); }
+function trGroup(s){ return s.level==='R'?'R':(s.level==='4'?'4':'567'); }
+function trGLabel(g){ return g==='R'?'Roof trusses':(g==='4'?'Level 4':'Levels 5-6-7'); }
+function trLvlLbl(g){ return g==='R'?'Roof trusses':g==='4'?'Level 4':((NF_PLANLVL>=5&&NF_PLANLVL<=7)?'Level '+NF_PLANLVL:'Levels 5-6-7'); }
+function trId(dataId,g){ return (g==='4'?'L4-':g==='R'?'LR-':'L567-')+(dataId==='5AB'?'B5':dataId); }
+function trHotId(h,g){ return (g==='R'&&h.tr)?h.tr:trId(h.id,g); }
+function trRoofReady(){ return !!(TR&&TR.sections.some(x=>x.level==='R'&&!trPend(x))); }
 function trDataId(s){ return s.building==='5'?'5AB':(s.building+s.section); }
 function trPend(s){ return s.status!=='ready'; }
 function trStripe(){ return '#d99a00'; }
 function trLoading(app,back,t1,t2){ app.innerHTML=header(back,t1,t2,trStripe())+'<div class="wrap"><div class="card"><div class="empty">Loading truss data… / Cargando datos de trusses…</div></div></div>'; }
 function trFail(app,err){ app.innerHTML=header({label:'Home',fn:"go('#home')"},'Trusses','Could not load / No se pudo cargar',trStripe())+'<div class="wrap"><div class="card"><div class="empty"><b>Truss data did not load.</b> Open the app once with signal, then try again. / Los datos de trusses no cargaron. Abre la app una vez con señal y vuelve a intentar.<br><small>'+esc(err&&err.message||err)+'</small></div></div></div>'; }
+function nfP6(app){ trUpd(app); app.querySelectorAll('.nav2').forEach(e=>e.remove()); const bb=document.getElementById('bottombar'); if(bb) bb.style.display='none'; }
 function trUpd(app){ const hd=app.querySelector('.hdr'); if(hd){ const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); }
   const w=app.querySelector('.wrap'); if(w && !document.getElementById('nfstat')) w.insertAdjacentHTML('afterbegin','<button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE '+NF_UPDATE.n+' · '+NF_UPDATE.date+'</button>'); nfCheck(); }
 function renderTR(app,r){
@@ -895,50 +901,55 @@ function renderTR(app,r){
 }
 /* ---------- Trusses home: level group, full plan, section buttons ---------- */
 let NF_PLANLVL=null;
-function trAll(app,g,lv){ g=(g==='567')?'567':'4'; if(lv&&/^[4-7]$/.test(lv)) NF_PLANLVL=+lv; const ML=(NF_PLANLVL&&(g==='4')===(NF_PLANLVL===4))?NF_PLANLVL:(g==='4'?4:5);
-  const labels=DATA.sections.map(s=>{ const id=trId(s.id,g); const t=TRSEC[id]; return `<button class="lbl${t&&trPend(t)?' pendl':''}" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#trsec--${id}')">${esc(t?trName(t):s.label)}${t&&trPend(t)?' <span class="hg">⏳</span>':''}</button>`; }).join('');
+function trAll(app,g,lv){ g=(g==='567'||g==='R')?g:'4'; if(lv&&/^[4-8]$/.test(lv)) NF_PLANLVL=+lv; const RP=(g==='R'&&TR.roof_plan)||null; const HOT=RP?RP.sections:DATA.sections; const ML=(NF_PLANLVL&&(g==='4')===(NF_PLANLVL===4))?NF_PLANLVL:(g==='4'?4:5);
+  const labels=HOT.map(s=>{ const id=trHotId(s,g); const t=TRSEC[id]; return `<button class="lbl${t&&trPend(t)?' pendl':''}" style="left:${s.cx}%;top:${s.cy}%;border-color:${rgb(s.color)}" onclick="event.stopPropagation();go('#trsec--${id}')">${esc(t?trName(t):s.label)}${t&&trPend(t)?' <span class="hg">⏳</span>':''}</button>`; }).join('');
   const secs=TRORDER.map(i=>TRSEC[i]).filter(s=>trGroup(s)===g);
   const grid=secs.map(s=>`<button class="mini ${trPend(s)?'pend':'ok'}" onclick="go('#trsec--${s.id}')" aria-label="${esc(trName(s))} ${trPend(s)?'pending':'ready'}"><span class="n">${esc(trName(s))}</span><span class="st">${trPend(s)?'<span class="hg">⏳</span>':'✔'}</span></button>`).join('');
   app.innerHTML=header({label:'Home',fn:"go('#home')"},'','',trStripe())+`
   <div class="wrap">
     <button class="nfstat c" id="nfstat" onclick="nfCheck()" aria-label="Update status">UPDATE ${NF_UPDATE.n} · ${NF_UPDATE.date}</button>
-    <div class="plan big" id="planTR" onclick="planTapTR(event,'${g}')"><img id="planimgTR" src="${imgSrc('fullplan')}" alt="Full plan">${labels}</div>
+    ${(g==='R'&&!RP)?'':`<div class="plan big" id="planTR" onclick="planTapTR(event,'${g}')"><img id="planimgTR" src="${RP?TR_BASE+RP.img:imgSrc('fullplan')}" alt="Full plan">${labels}</div>`}
     <div class="minigrid">${grid}</div>
     <div class="card"><button class="btn sec" onclick="go('#trsearch')">🔎 Search a truss mark (WF29)</button></div>
-    <div class="foot">Allied Truss · Procore Submittal #277 · For Construction · Approved as Noted · 10/27/26. Design pages are shown exactly as issued (PE-sealed).</div>
+    <div class="foot">${g==='R'?esc(TR.roof_foot||'Allied Truss · Roof trusses. Design pages are shown exactly as issued (PE-sealed).'):'Allied Truss · Procore Submittal #277 · For Construction · Approved as Noted · 10/27/26. Design pages are shown exactly as issued (PE-sealed).'}</div>
   </div>`;
   const hd=app.querySelector('.hdr'); if(hd){ hd.classList.add('notitle'); const ub=hd.querySelector('.updbar'); if(ub) ub.remove(); }
   nfCheck(); }
-function planTapTR(ev,g){ const img=document.getElementById('planimgTR'); const r=img.getBoundingClientRect();
+let idxCanvasR=null;
+function planTapTR(ev,g){ const RP=(g==='R'&&TR.roof_plan)||null; const HOT=RP?RP.sections:DATA.sections; const img=document.getElementById('planimgTR'); const r=img.getBoundingClientRect();
   const x=(ev.clientX-r.left)/r.width, y=(ev.clientY-r.top)/r.height; if(x<0||y<0||x>1||y>1) return;
   const done=(c)=>{ const W=c.width,H=c.height; const px=c.getContext('2d').getImageData(Math.floor(x*W),Math.floor(y*H),1,1).data[0]; let k=0;
-    if(px>0 && DATA.sections[px-1]) k=px; else { const d=c.getContext('2d').getImageData(Math.max(0,Math.floor(x*W)-12),Math.max(0,Math.floor(y*H)-12),24,24).data; const cnt={}; for(let i=0;i<d.length;i+=4){ if(d[i]>0) cnt[d[i]]=(cnt[d[i]]||0)+1; } let bn=0; for(const q in cnt){ if(cnt[q]>bn){bn=cnt[q];k=+q;} } }
-    if(k>0 && DATA.sections[k-1]) go('#trsec--'+trId(DATA.sections[k-1].id,g)); };
-  if(idxCanvas){ done(idxCanvas); return; }
-  const im=new Image(); im.onload=()=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); idxCanvas=c; done(c); }; im.src=imgSrc('fullplan_index'); }
+    if(px>0 && HOT[px-1]) k=px; else { const d=c.getContext('2d').getImageData(Math.max(0,Math.floor(x*W)-12),Math.max(0,Math.floor(y*H)-12),24,24).data; const cnt={}; for(let i=0;i<d.length;i+=4){ if(d[i]>0) cnt[d[i]]=(cnt[d[i]]||0)+1; } let bn=0; for(const q in cnt){ if(cnt[q]>bn){bn=cnt[q];k=+q;} } }
+    if(k>0 && HOT[k-1]) go('#trsec--'+trHotId(HOT[k-1],g)); };
+  const have=RP?idxCanvasR:idxCanvas; if(have){ done(have); return; }
+  const im=new Image(); im.onload=()=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); if(RP) idxCanvasR=c; else idxCanvas=c; done(c); }; im.src=RP?TR_BASE+RP.index_img:imgSrc('fullplan_index'); }
 /* ---------- Section menu (Karla's structure: layout / connections / shear blocks / repairs) ---------- */
-function trMenuRow(ico,en,es,sub,onclick,dis){ return `<button class="sbtn" style="width:100%;margin:0 0 10px 0${dis?';opacity:.6':''}" ${dis?'disabled':`onclick="${onclick}"`}><span style="font-size:26px;flex:0 0 auto">${ico}</span><span><span class="n" style="font-size:16px">${en}</span><br><span class="b">${es}</span><br><span class="b">${sub}</span></span></button>`; }
+function trMenuRow(ico,title,sub,onclick,dis){ return `<button class="sbtn lvrow${dis?' off':''}" ${dis?'disabled':`onclick="${onclick}"`}><span class="lvi">${ico}</span><span class="lvt"><span class="n">${title}</span><br><span class="b">${sub}</span></span></button>`; }
 function trSec(app,s){ trMore(app,s); }
 function trMore(app,s,bk){ const g=trGroup(s), cid=trDataId(s);
   const hasConn=(g==='4' && SEC[cid]);
-  const swLv=(g==='4'?['4th']:['5th','6th']).filter(l=>SWDATA.sw_imgs && SWDATA.sw_imgs[l] && SWDATA.sw_imgs[l][cid]);
+  const swLv=(g==='4'?['4th']:g==='R'?[]:['5th','6th']).filter(l=>SWDATA.sw_imgs && SWDATA.sw_imgs[l] && SWDATA.sw_imgs[l][cid]);
+  const RFIICO='<svg class="sbico" viewBox="0 0 100 100" width="52" height="52" aria-hidden="true"><line x1="66" y1="66" x2="92" y2="92" stroke="#111827" stroke-width="11" stroke-linecap="round"/><circle cx="42" cy="42" r="33" fill="#ffffff" stroke="#111827" stroke-width="7"/><text x="42" y="52" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="28" fill="#111827">RFI</text></svg>'; const SHEARICO='<svg class="sbico" viewBox="0 0 100 100" width="52" height="52" aria-hidden="true"><rect x="6" y="6" width="88" height="88" rx="2" fill="#ffffff" stroke="#1e1b6b" stroke-width="5"/><polygon points="19,19 73,19 19,77" fill="#fde9a6" stroke="#1e1b6b" stroke-width="4" stroke-linejoin="round"/><polygon points="81,27 77,81 27,81" fill="#fde9a6" stroke="#1e1b6b" stroke-width="4" stroke-linejoin="round"/></svg>';
   let rows='';
   rows+= trPend(s)
-   ? trMenuRow('⏳','Truss layout','Layout de trusses','Pending For Construction set — Allied has not issued it yet / Pendiente: Allied aún no lo emite','',true)
-   : trMenuRow('📐','Truss layout','Layout de trusses','Layout sheet with the trusses of this section / Hoja de layout con los trusses de esta sección',`go('#trlay--${s.id}')`);
+   ? trMenuRow('⏳','Truss layout','Pending','',true)
+   : trMenuRow('📐','Truss layout',s._marks.length+' trusses',`go('#trlay--${s.id}')`);
   rows+= hasConn
-   ? trMenuRow('🔩','Truss connections','Conexiones de trusses','Connections to walls, posts, etc. / Conexiones a paredes, postes, etc.',`go('#sec--${cid}')`)
-   : trMenuRow('🔩','Truss connections','Conexiones de trusses','Pending — only Level 4 is in the app today / Pendiente: hoy solo está el nivel 4','',true);
-  if(swLv.length){ rows+= trMenuRow('🧱','Shear blocks locations','Ubicación de shear blocks',swLv.map(l=>l+' level').join(' · '),swLv.length===1?`go('#swsec--${swLv[0]}--${cid}')`:`trPickSW('${cid}')`);
+   ? trMenuRow('🔩','Truss connections','Walls, posts, etc.',`go('#sec--${cid}')`)
+   : trMenuRow('🔩','Truss connections','Pending','',true);
+  if(swLv.length){ rows+= trMenuRow(SHEARICO,'Shear blocks locations',swLv.map(l=>l+' level').join(' · '),swLv.length===1?`go('#swsec--${swLv[0]}--${cid}')`:`trPickSW('${cid}')`);
     if(swLv.length>1) rows+=`<div class="tabs" id="swpick" style="display:none">${swLv.map(l=>`<button class="tab" onclick="go('#swsec--${l}--${cid}')">${l} level</button>`).join('')}</div>`; }
-  else rows+= trMenuRow('🧱','Shear blocks locations','Ubicación de shear blocks','Pending / Pendiente','',true);
-  rows+= trMenuRow('🛠','Repairs & RFI changes','Reparaciones y cambios por RFI','None posted yet for this section / Ninguno publicado para esta sección','',true);
-  app.innerHTML=header(bk?{label:'Layout',fn:bk}:{label:'Plan',fn:`go('#trall--${g}--${NF_PLANLVL||(g==='4'?4:5)}')`},`${esc(trName(s))}`,`${esc(trSub(s))} · ${trLvlLbl(g)}`,trStripe())+`
+  else rows+= trMenuRow(SHEARICO,'Shear blocks locations','Pending','',true);
+  rows+= trMenuRow(RFIICO,'RFI\'s','None posted','',true);
+  rows+= trMenuRow('🛠','Repairs','None posted','',true);
+  app.innerHTML=header(bk?{label:'Layout',fn:bk}:{label:'Plan',fn:`go('#trall--${g}--${g==='R'?8:(NF_PLANLVL||(g==='4'?4:5))}')`},`${esc(trName(s))}`,`${esc(trSub(s))} · ${trLvlLbl(g)}`,trStripe())+`
   <div class="wrap">
-    ${trPend(s)?`<div class="card" style="border:3px solid #c9850a;background:#fff4c2"><h2>⏳ Pending For Construction set <small>Pendiente set For Construction</small></h2><div>Allied has not issued the For Construction set for ${esc(trName(s))} at ${trGLabel(g)} (it is not in Submittal #277). It will be added when Allied issues it. / Allied aún no ha emitido el set For Construction de ${esc(trName(s))} en ${trGLabel(g)} (no está en el Submittal #277). Se agregará cuando lo emita.</div></div>`:''}
-    <div class="card"><h2>Drawings <small>Planos</small></h2>${rows}</div>
-    <div class="foot">Allied Truss · Submittal #277 · ${trLvlLbl(g)}</div>
-  </div>`; }
+    ${trPend(s)?`<div class="card" style="border:3px solid #c9850a;background:#fff4c2"><h2>⏳ Pending For Construction set <small>Pendiente set For Construction</small></h2><div>Allied has not issued the For Construction set for ${esc(trName(s))} at ${trGLabel(g)}${g==='R'?'':' (it is not in Submittal #277)'}. It will be added when Allied issues it. / Allied aún no ha emitido el set For Construction de ${esc(trName(s))} en ${trGLabel(g)}${g==='R'?'':' (no está en el Submittal #277)'}. Se agregará cuando lo emita.</div></div>`:''}
+    <div class="card"><h2>Files <small>Tap one</small></h2>${rows}</div>
+    ${trPend(s)?'':`<div class="card" id="trsave" data-alt="1"></div>`}
+    <div class="foot">${trLvlLbl(g)}</div>
+  </div>`;
+  if(!trPend(s)) trPaintSave(s.id); }
 function trPickSW(cid){ const e=document.getElementById('swpick'); if(e) e.style.display=(e.style.display==='none'?'flex':'none'); }
 /* ---------- Layout sheet with tappable truss marks ---------- */
 function trTaps(s,hl){ const W=s.layout_px[0], H=s.layout_px[1], mw=40/W, mh=40/H; const out=[];
@@ -949,7 +960,7 @@ function trLay(app,s,hl){ const g=trGroup(s); const m=hl&&s.marks[hl]; let init=
   if(m && m.pos && m.pos[0]){ const q=m.pos[0]; init={scale:6,x:((q[0]+q[2])/2)*s.layout_px[0],y:((q[1]+q[3])/2)*s.layout_px[1]}; }
   app.innerHTML=header({label:'Menu',fn:`go('#trsec--${s.id}')`},`Truss layout — ${esc(trName(s))}`,`${esc(trSub(s))} · ${trLvlLbl(g)}${hl?' · '+esc(hl):''}`,trStripe())+`
   <div class="wrap">
-    <div class="card"><h2>Layout sheet <small>Pinch to zoom, then tap a yellow box</small></h2><div class="viewer" id="v-trlay"></div>
+    <div class="card"><h2>Truss layout <small>Pinch to zoom, then tap a yellow box</small></h2><div class="viewer" id="v-trlay"></div>
       <div class="hint">Truss labels are small: zoom in first, or pick the truss from the list below.</div></div>
     <div class="card"><h2>Trusses in this section <small>${s._marks.length} marks</small></h2>
       <input class="srch" id="trfilter" placeholder="Filter (WF29, W4B…)" oninput="trFilter('${s.id}')" autocomplete="off" autocapitalize="characters">
@@ -998,7 +1009,7 @@ async function trPaintSave(id){ const s=TRSEC[id], box=document.getElementById('
   else if(TRBUSY[id]) body=`<div id="trprog" style="font-weight:800">Saving… ${TRBUSY[id].done} of ${tot}</div>`;
   else if(n>=tot) body=`<div style="font-weight:800;color:var(--ok)">✔ Saved on this phone</div><div class="hint">All ${tot} truss design pages of this section work with no signal.</div><button class="btn sec" style="margin-top:8px" onclick="trRemove('${id}')">Remove from phone</button>`;
   else body=`<button class="btn" onclick="trSave('${id}')"><span>⬇ Save this section offline · ${size}<br><small style="font-weight:600">${tot} pages${n>0?' · '+n+' already saved':''}</small></span></button><div class="hint">Do this once with Wi-Fi or good signal.</div>`;
-  box.innerHTML=`<h2>Offline</h2><div class="hint" style="margin:0 0 8px 0">The layout sheet and truss positions are always saved on the phone.</div>`+body; }
+  box.innerHTML=`<h2>Offline</h2><div class="hint" style="margin:0 0 8px 0">${box.dataset.alt?'Layouts, connections and shear blocks are always on the phone.':'The layout sheet and truss positions are always saved on the phone.'}</div>`+body; }
 async function trSave(id){ const s=TRSEC[id]; if(TRBUSY[id]) return; TRBUSY[id]={done:0,fail:0};
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
   const c=await caches.open(TR_CACHE); const have=new Set((await c.keys()).map(r=>r.url)); const todo=s._urls.filter(u=>!have.has(trAbs(u))); TRBUSY[id].done=s._urls.length-todo.length; trPaintSave(id);
@@ -1022,6 +1033,7 @@ if ('serviceWorker' in navigator) {
       // screen (no browser tab, no refresh button) that schedule can be very lazy and
       // the crew can be stuck on an old cached version for a long time without knowing.
       reg.update().catch(() => {});
+      navigator.serviceWorker.ready.then((r) => { try { r.active.postMessage({type:'prefetch'}); } catch (e) {} });
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         if (!nw) return;
@@ -1038,7 +1050,7 @@ if ('serviceWorker' in navigator) {
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update()).catch(() => {});
+      navigator.serviceWorker.getRegistration().then((reg) => { if (reg) { reg.update(); if (reg.active) reg.active.postMessage({type:'prefetch'}); } }).catch(() => {});
     }
   });
 }

@@ -1,7 +1,7 @@
 {
-  "name": "TEST - NF Floor Trusses (UPDATE 7)",
+  "name": "TEST - NF Floor Trusses (4D)",
   "short_name": "TEST Trusses",
-  "description": "TEST copy - Floor Trusses with Trusses tab - AMLI West",
+  "description": "TEST copy - Floor Trusses UPDATE 27 + section 4D (levels 5-7) - AMLI West",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -9,29 +9,9 @@
   "background_color": "#fff8d6",
   "theme_color": "#ffc400",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

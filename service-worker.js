@@ -1,10 +1,15 @@
-// AMLI West - Floor Truss Connections - service worker
-// Cache-first offline app shell + all section/detail images, so the app works with
-// zero network after the first successful load (iOS and Android alike).
-const CACHE_VERSION = 'nf-trtest-app-v26';
+// AMLI West - Floor Truss Connections - service worker (TEST copy: UPDATE 27 + section 4D L5-7)
+// Two caches so an UPDATE never has to download the big images again:
+//  1) SHELL (CACHE_VERSION, renamed every UPDATE, ~1 MB): the screens (index.html), manifest, icons, trusses.json.
+//     Network-first when there is signal (always the newest screens); cached copy with no signal or a slow network.
+//  2) IMAGES (IMG_CACHE, renamed ONLY when an image file changes): the plans and sheets. Cache-first. Images already on the
+//     phone are copied from the older caches on upgrade (no download); missing ones are fetched in the background and
+//     resume on the next open if the signal drops.
+const CACHE_VERSION = 'nf-trtest-app-v27-4d';
+const IMG_CACHE = 'nf-trtest-app-img-1';
 const CACHE_PREFIX = 'nf-trtest-app-';  // TEST copy: never touches the live app's caches (nf-floortruss-*) on the same origin
 const SEC_CACHE = 'nf-trtest-sec';       // truss sections saved on demand (page script manages it)
-const PRECACHE_URLS = [
+const SHELL_URLS = [
   "./",
   "./index.html",
   "./manifest.json",
@@ -15,6 +20,9 @@ const PRECACHE_URLS = [
   "./icon-152.png",
   "./header-mark.png",
   "./header-logo.png",
+  "trusses/data/trusses.json"
+];
+const IMG_URLS = [
   "img/fullplan.webp",
   "img/fullplan_index.png",
   "img/how1.webp",
@@ -158,7 +166,6 @@ const PRECACHE_URLS = [
   "img/sw6_3C.webp",
   "img/sw6_3B.webp",
   "img/sw6_3A.webp",
-  "trusses/data/trusses.json",
   "trusses/layouts/L4-3A.webp",
   "trusses/layouts/L4-3B.webp",
   "trusses/layouts/L4-3C.webp",
@@ -172,38 +179,86 @@ const PRECACHE_URLS = [
   "trusses/layouts/L567-3C.webp",
   "trusses/layouts/L567-4A.webp",
   "trusses/layouts/L567-4B.webp",
-  "trusses/layouts/L567-4C.webp"
+  "trusses/layouts/L567-4C.webp",
+  "trusses/layouts/L567-4D.webp"
 ];
+const SHELL_PATHS = new Set(SHELL_URLS.map((u) => new URL(u, self.location).pathname));
+const IMG_PATHS = new Set(IMG_URLS.map((u) => new URL(u, self.location).pathname));
+
+async function migrateImages() {
+  const img = await caches.open(IMG_CACHE);
+  for (const u of IMG_URLS) {
+    try {
+      if (await img.match(u)) continue;
+      const old = await caches.match(u);          // looks in every cache, incl. the previous versioned ones (no network)
+      if (old && old.ok) await img.put(u, old.clone());
+    } catch (e) {}
+  }
+}
+async function prefetchImages() {
+  const img = await caches.open(IMG_CACHE);
+  const todo = [];
+  for (const u of IMG_URLS) { if (!(await img.match(u))) todo.push(u); }
+  let i = 0;
+  const worker = async () => {
+    while (i < todo.length) {
+      const u = todo[i++];
+      try { const r = await fetch(u, { cache: 'reload' }); if (r && r.status === 200) await img.put(u, r.clone()); } catch (e) {}
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+}
+async function fetchFresh(url, ms) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms);
+  try { return await fetch(url, { cache: 'no-store', signal: ctl.signal }); } finally { clearTimeout(t); }
+}
+async function shellFirst(req) {
+  const cache = await caches.open(CACHE_VERSION);
+  const nav = req.mode === 'navigate';
+  const key = nav ? './index.html' : req.url;
+  try {
+    const resp = await fetchFresh(nav ? './index.html' : req.url, 4000);
+    if (resp && resp.status === 200) { cache.put(key, resp.clone()); return resp; }
+  } catch (e) {}
+  return (await cache.match(key, { ignoreSearch: nav })) || (await cache.match('./')) || fetch(req);
+}
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    await Promise.all(SHELL_URLS.map((u) => cache.add(new Request(u, { cache: 'reload' }))));
+    try { await migrateImages(); } catch (e) {}
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((names) => Promise.all(
-      names.filter((n) => n.startsWith(CACHE_PREFIX) && n !== CACHE_VERSION).map((n) => caches.delete(n))
+      names.filter((n) => n.startsWith(CACHE_PREFIX) && n !== CACHE_VERSION && n !== IMG_CACHE).map((n) => caches.delete(n))
     )).then(() => self.clients.claim())
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'prefetch') event.waitUntil(prefetchImages());
+});
+
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  if (req.mode === 'navigate' || SHELL_PATHS.has(url.pathname)) { event.respondWith(shellFirst(req)); return; }
   event.respondWith(
-    caches.open(CACHE_VERSION).then((own) => own.match(event.request)).then((cached) => cached || caches.open(SEC_CACHE).then((c) => c.match(event.request))).then((cached) => {
+    caches.match(req).then((cached) => {
       if (cached) return cached;
-      return fetch(event.request).then((resp) => {
-        if (resp && resp.status === 200 && resp.type === 'basic' && event.request.url.indexOf('/trusses/designs/') < 0) {
+      return fetch(req).then((resp) => {
+        if (resp && resp.status === 200 && resp.type === 'basic' && url.pathname.indexOf('/trusses/designs/') < 0) {
           const copy = resp.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, copy));
+          caches.open(IMG_PATHS.has(url.pathname) ? IMG_CACHE : CACHE_VERSION).then((c) => c.put(req, copy));
         }
         return resp;
-      }).catch(() => {
-        // Offline and not in cache: for a navigation request, fall back to the app shell.
-        if (event.request.mode === 'navigate') return caches.open(CACHE_VERSION).then((own) => own.match('./index.html'));
       });
     })
   );
